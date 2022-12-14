@@ -43,7 +43,9 @@ class MainForm(QtWidgets.QMainWindow):
 
         float_array = [float(x) for x in string_array]
 
-        print(float_array)
+        return float_array
+
+    
 
 
 if __name__ == "__main__":
