@@ -49,12 +49,14 @@ def convolution(number_complex_readings: int,
     for i in range(number_pulse_readings):
         support_function_2[i] = support_function_1[i+number_pulse_readings]
         support_function_2[i+2**power_two-number_pulse_readings] = support_function_1[i]
-    ftt_support_function_2 = np.fft.fft(support_function_2)
-
+    
+    ftt_support_function_2 = np.fft.fft2(support_function_2)
+    
     plt.figure()
-    plt.plot(support_function_1.imag)
+    plt.plot(abs(ftt_support_function_2))
     plt.show()
-
+    
+    print(ftt_support_function_2)
     print(ftt_support_function_2[2],ftt_support_function_2[20], ftt_support_function_2[106])
     return support_function_1
 
