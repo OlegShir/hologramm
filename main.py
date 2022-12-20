@@ -24,8 +24,10 @@ class MainForm(QtWidgets.QMainWindow):
         # если фаил выбран -> сохраняем его путь и имя
         if file_path:
             self.file_path = file_path
+            print(self.file_path)
             self.file_name = file_path.split("/")[-1]
             self.label_file_name.setText(self.file_name)
+            
         
 
     def collection_param_RLS(self) -> list:
