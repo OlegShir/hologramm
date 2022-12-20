@@ -90,14 +90,16 @@ class Convolution():
             rgg_file.seek(2*self.number_complex_readings*self.N_otst, 0)
             # создание временного нового файла для свертки по вертекали
             new_file_path = self.file_path[:-3]+'rpt'
-            # формирование значений от -127 до +128
-      
-            #st = gt(st,128).*(st-256)+le(st,128).*st
 
 
-
+            # чтение очередной части файла
             new_part = np.frombuffer(rgg_file.read(2*self.number_complex_readings), dtype='uint8')
+            # формирование значений от -127 до +128 изменением формата
             new_part = new_part.view(dtype=np.int8)
+
+
+           
+            
 
             print(new_part)
 
