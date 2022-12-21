@@ -24,7 +24,7 @@ class Convolution():
                  pulse_period,
                  signal_spectrum_width,
                  pulse_duration: int,
-                 file_path: str, 
+                 file_path: str,
                  file_name: str = '',
                  ) -> None:
 
@@ -38,7 +38,7 @@ class Convolution():
         self.file_path = file_path
         self.file_name = file_name
         # наибольшая степени двойки для отсчетов
-        self.power_two = number_complex_readings.bit_length()
+        self.power_two = 2**number_complex_readings.bit_length()
         # уточнить
         self.N_otst = 40000
         self.Na = 90000
@@ -46,7 +46,7 @@ class Convolution():
     def get_support_functions(self) -> None:
 
         # получение первой опорнай функции
-        support_function_1 = np.zeros(2**self.power_two, dtype=np.complex128)
+        support_function_1 = np.zeros(self.power_two, dtype=np.complex128)
         # число отсчетов в импульсе
         number_pulse_readings = round(
             self.pulse_duration*self.sampling_frequency)
@@ -60,17 +60,17 @@ class Convolution():
             support_function_1[i] = complex_value
 
         # вторая опорная функция
-        support_function_2 = np.zeros((2**self.power_two, 1), dtype=np.complex128)
+        support_function_2 = np.zeros((self.power_two, 1), dtype=np.complex128)
         # число отсчетов в импульсе
         number_pulse_readings = round(number_pulse_readings/2)
         # сдвиг опорной функции для совмещения начала изображения (кадра)
         # с началом отсчетов
         for i in range(number_pulse_readings):
             support_function_2[i] = support_function_1[i+number_pulse_readings]
-            support_function_2[i+2**self.power_two -
+            support_function_2[i+self.power_two -
                                number_pulse_readings] = support_function_1[i]
         # приминение БПФ к опорной функции
-        ftt_support_function_2 = np.fft.fft2(support_function_2)
+        self.ftt_support_function_2 = np.fft.fft2(support_function_2)
         '''
         # вывод полученных графиков
         plt.figure()
@@ -81,30 +81,40 @@ class Convolution():
         plt.show()
         '''
 
-        return ftt_support_function_2
-
-
     def range_convolution(self):
+        # создание уточнить
+        svRG = stc = np.zeros(self.power_two, dtype=np.complex128)
+
         with open(self.file_path, 'rb') as rgg_file:
             # поиск начала считывания информации
             rgg_file.seek(2*self.number_complex_readings*self.N_otst, 0)
             # создание временного нового файла для свертки по вертекали
             new_file_path = self.file_path[:-3]+'rpt'
 
-
             # чтение очередной части файла
-            new_part = np.frombuffer(rgg_file.read(2*self.number_complex_readings), dtype='uint8')
+            new_part = np.frombuffer(rgg_file.read(
+                2*self.number_complex_readings), dtype='uint8')
             # формирование значений от -127 до +128 изменением формата
             new_part = new_part.view(dtype=np.int8)
-
-
-           
+            # создание копии из буфера для возможности его редактивования
+            new_part_copy = new_part.copy()
+            # очистка буфера
+            del new_part
+            # заполнение первых 128 значений нулем
+            new_part_copy[:128] = 0
+            # из удвоенного количества отсчетов дальности создается матрица в комплексном виде
+            for i in range(self.number_complex_readings):
+                stc[i+1] = complex(new_part_copy[2*i],
+                                   new_part_copy[2*i+1])
+            stc[self.number_complex_readings:self.power_two] = 0
             
+            fft_stc = np.fft.fft(stc,)/1000
+            # создание свертки комплексного столбца и опорной функции
 
-            print(new_part)
+            print(fft_stc)
 
             with open(new_file_path, 'w') as rpt_file:
-                
+
                 '''for i in range(self.Na):
                     new_part = rgg_file.read(2*self.number_complex_readings)'''
 
@@ -120,12 +130,13 @@ if __name__ == '__main__':
     pulse_duration = 10e-6
 
     sf = Convolution(number_complex_readings,
-                               number_registered_impulses,
-                               sampling_frequency,
-                               wavelength,
-                               pulse_period,
-                               signal_spectrum_width,
-                               pulse_duration,
-                               "C:/Users/X/Desktop/185900/1.rgg")
-                            
+                     number_registered_impulses,
+                     sampling_frequency,
+                     wavelength,
+                     pulse_period,
+                     signal_spectrum_width,
+                     pulse_duration,
+                     "C:/Users/X/Desktop/185900/1.rgg")
+
+    sf.get_support_functions()
     sf.range_convolution()
