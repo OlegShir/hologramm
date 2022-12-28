@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import scipy as sc
 """Модуль производит свертку голограммы подальности.
 
 Исходными данными являются:
@@ -53,14 +54,14 @@ class Convolution():
         for i in range(number_pulse_readings):
             # выражение для расчета фазы первой опорной функции
             phase = np.pi * self.signal_spectrum_width * \
-                (i-1)**2/(number_pulse_readings*self.sampling_frequency) - \
-                np.pi*self.signal_spectrum_width*(i-1)/self.sampling_frequency
+                (i)**2/(number_pulse_readings*self.sampling_frequency) - \
+                np.pi*self.signal_spectrum_width*(i)/self.sampling_frequency
             # отсчет фазы сигнала в комплексном виде [cos(phase) + sin(phase)j]
             complex_value = complex(np.cos(phase), np.sin(phase))
             support_function_1[i] = complex_value
 
         # вторая опорная функция
-        support_function_2 = np.zeros((self.power_two, 1), dtype=np.complex128)
+        support_function_2 = np.zeros((self.power_two), dtype=np.complex128)
         # число отсчетов в импульсе
         number_pulse_readings = round(number_pulse_readings/2)
         # сдвиг опорной функции для совмещения начала изображения (кадра)
@@ -70,7 +71,8 @@ class Convolution():
             support_function_2[i+self.power_two -
                                number_pulse_readings] = support_function_1[i]
         # приминение БПФ к опорной функции
-        self.ftt_support_function_2 = np.fft.fft2(support_function_2)
+        support_function_2 = support_function_2
+        self.ftt_support_function_2 = sc.fft.fft(support_function_2)
         '''
         # вывод полученных графиков
         plt.figure()
@@ -84,34 +86,36 @@ class Convolution():
     def range_convolution(self):
         # создание уточнить
         svRG = stc = np.zeros(self.power_two, dtype=np.complex128)
-
+        # открытие файла голограммы
         with open(self.file_path, 'rb') as rgg_file:
             # поиск начала считывания информации
             rgg_file.seek(2*self.number_complex_readings*self.N_otst, 0)
             # создание временного нового файла для свертки по вертекали
             new_file_path = self.file_path[:-3]+'rpt'
-
-            # чтение очередной части файла
+            # чтение фрейма файла
             new_part = np.frombuffer(rgg_file.read(
                 2*self.number_complex_readings), dtype='uint8')
-            # формирование значений от -127 до +128 изменением формата
-            new_part = new_part.view(dtype=np.int8)
             # создание копии из буфера для возможности его редактивования
             new_part_copy = new_part.copy()
             # очистка буфера
             del new_part
+            # формирование значений от -127 до +128 изменением формата
+            new_part_copy = new_part_copy.astype('int8')
             # заполнение первых 128 значений нулем
             new_part_copy[:128] = 0
             # из удвоенного количества отсчетов дальности создается матрица в комплексном виде
             for i in range(self.number_complex_readings):
-                stc[i+1] = complex(new_part_copy[2*i],
-                                   new_part_copy[2*i+1])
+                stc[i] = complex(new_part_copy[2*i],
+                                 new_part_copy[2*i+1])
             stc[self.number_complex_readings:self.power_two] = 0
-            
-            fft_stc = np.fft.fft(stc,)/1000
+            fft_stc = sc.fft.fft(stc)
             # создание свертки комплексного столбца и опорной функции
-
-            print(fft_stc)
+            svRG = fft_stc*self.ftt_support_function_2
+            svRG = sc.fft.ifft(svRG)
+            # создание фейма для записи
+            write_frame = np.zeros(2*self.power_two)
+            write_frame[0:self.power_two] = svRG.real
+            write_frame[self.power_two:2*self.power_two] = svRG.imag
 
             with open(new_file_path, 'w') as rpt_file:
 
