@@ -11,8 +11,11 @@ wavelength - длина волны;
 pulse_period - период повторения импульсов;
 signal_spectrum_width - ширина спектра сигнала;
 pulse_duration - длительность импульса;
+
 file_path - путь до файла голограммы;
 file_name - название файла голограммы (опционально);
+
+movement_speed - скорость движения
 """
 
 
@@ -27,6 +30,7 @@ class Convolution():
                  pulse_duration: int,
                  file_path: str,
                  file_name: str = '',
+                 #movement_speed: int,
                  ) -> None:
 
         self.number_complex_readings = number_complex_readings
@@ -38,8 +42,11 @@ class Convolution():
         self.pulse_duration = pulse_duration
         self.file_path = file_path
         self.file_name = file_name
-        # наибольшая степени двойки для отсчетов
-        self.power_two = 2**number_complex_readings.bit_length()
+        # расчетные выражения:
+        # - наибольшая степени двойки для отсчетов
+        self.power_two: int = 2**number_complex_readings.bit_length()
+        # - шаг по дальности
+        range_step: int = 3e8/(2*self.sampling_frequency)
         # уточнить
         self.N_otst = 40000
         self.Na = 90000
@@ -93,12 +100,12 @@ class Convolution():
             # создание временного нового файла для свертки по вертекали
             new_file_path = self.file_path[:-3]+'rpt'
             # чтение фрейма файла
-            new_part = np.frombuffer(rgg_file.read(
+            new_part_rgg_file = np.frombuffer(rgg_file.read(
                 2*self.number_complex_readings), dtype='uint8')
             # создание копии из буфера для возможности его редактивования
-            new_part_copy = new_part.copy()
+            new_part_copy = new_part_rgg_file.copy()
             # очистка буфера
-            del new_part
+            del new_part_rgg_file
             # формирование значений от -127 до +128 изменением формата
             new_part_copy = new_part_copy.astype('int8')
             # заполнение первых 128 значений нулем
