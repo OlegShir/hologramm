@@ -1,5 +1,4 @@
-import json
-import sqlite3
+import json, sqlite3, os
 '''
 Количество комплексных отсчетов в канале дальности РГГ (в 1 импульсе) number_complex_readings
 Количество зарегистрированных импульсов number_registered_impulses
@@ -13,12 +12,41 @@ import sqlite3
 
 
 class Adapter():
-    def __init__(self, type) -> None:
+    def __init__(self, type:str, name:str) -> None:
         if type == 'SQL':
-            self.con = sqlite3.connect('RLS.db')
-            self.cur = self.con.cursor()
+            self.connect = SQL_connect(name)
+        if type == 'json':
+            self.connect = Json_connect(name) 
 
-    def get_list_RLS(self) -> list:
+
+
+class Json_connect():
+    def __init__(self, name:str) -> None:
+        with open(name, "r", encoding="utf-8") as read_file:
+            self.json_file = json.load(read_file)
+
+    def get_list_RSA(self) -> list:
+        list_RSA = []
+        for key in self.json_file:
+            list_RSA.append(key)
+        
+        return list_RSA
+        
+
+    def get_list_param_RLS(self, RLS_name: str) -> list:
+        list_param_RLS = self.json_file[RLS_name]
+
+        return list_param_RLS
+
+
+
+class SQL_connect():
+    def __init__(self, name:str) -> None:
+        self.con = sqlite3.connect(name)
+        self.cur = self.con.cursor()
+
+
+    def get_list_RSA(self) -> list:
         '''Получение списка наименований РСЛ'''
         respone = self.cur.execute('SELECT RLS_name FROM RLS_param').fetchall()
         list_values = [x[0] for x in respone]
@@ -34,5 +62,7 @@ class Adapter():
         return list_values
 
 if __name__ == '__main__':
-    db = SQLighter()
-    print(db.get_list_param_RLS('f1'))
+    q = Adapter('json', 'RSA.json')
+    print(q.connect.get_list_RSA())
+    print(q.connect.get_list_param_RLS('Компакт'))
+
