@@ -129,6 +129,8 @@ class Convolution():
                 '''for i in range(self.Na):
                     new_part = rgg_file.read(2*self.number_complex_readings)'''
 
+    def azimuth_convolution(self, preview: bool = True, x0: int = ):
+        
 
 if __name__ == '__main__':
 
