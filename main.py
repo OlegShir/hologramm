@@ -11,20 +11,21 @@ class MainForm(QtWidgets.QMainWindow):
         self.file_name: str = ''
 
         # загрузка файла интерфейса основного окна
-        uic.loadUi('qt_forms/qt_main.ui', self)
+        uic.loadUi('qt_forms/qt_main_new2.ui', self)
         # нажатие открыть голограмму
-        self.open_file.clicked.connect(self.get_file_path)
+        self.open_file.clicked.connect(self.get_file)
         self.show()
 
-    def get_file_path(self) -> None:
-        """Метод загрузки расположения файла голограммы."""
-        self.collection_param_RLS()
-        file_path, a = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Выберите голограмму", "", "Hologramm (*.rgg)")
+    def get_file(self) -> None:
+        """Метод загрузки файла голограммы (*.rgg) или изображения(*.jpg)."""
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Выберите голограмму или РЛ-изображение", "", "PCA (*.rgg, *.jpg)")
         # если фаил выбран -> сохраняем его путь и имя
         if file_path:
             self.file_path = file_path
             print(self.file_path)
+
+            
             self.file_name = file_path.split("/")[-1]
             self.label_file_name.setText(self.file_name)
             
