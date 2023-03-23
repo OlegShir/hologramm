@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>786</width>
+    <width>774</width>
     <height>562</height>
    </rect>
   </property>
@@ -82,21 +82,11 @@
       </rect>
      </property>
      <property name="text">
-      <string/>
+      <string>Добавить элемент САП</string>
      </property>
      <property name="icon">
       <iconset>
        <normaloff>resources/add_RCA.png</normaloff>resources/add_RCA.png</iconset>
-     </property>
-    </widget>
-    <widget class="QTableView" name="table_SAP">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>50</y>
-       <width>341</width>
-       <height>161</height>
-      </rect>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_3">
@@ -109,17 +99,27 @@
       </rect>
      </property>
      <property name="text">
-      <string>-</string>
+      <string>Удалить элемент САП</string>
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>resources/add_RCA.png</normaloff>resources/add_RCA.png</iconset>
+       <normaloff>resources/del_RCA.png</normaloff>resources/del_RCA.png</iconset>
+     </property>
+    </widget>
+    <widget class="QTableWidget" name="table_SAP">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>341</width>
+       <height>161</height>
+      </rect>
      </property>
     </widget>
    </widget>
-   <widget class="QPushButton" name="open_file_3">
+   <widget class="QPushButton" name="create_SAP">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -135,7 +135,7 @@
    </widget>
    <widget class="QPushButton" name="open_file_4">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -146,7 +146,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Расчитат САП</string>
+     <string>Расчитать САП</string>
     </property>
    </widget>
    <widget class="QGraphicsView" name="canvas_SAP">
@@ -180,7 +180,7 @@
    </widget>
    <widget class="QPushButton" name="open_file_5">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -191,10 +191,10 @@
      </rect>
     </property>
     <property name="text">
-     <string>Сохранить САП</string>
+     <string>Сохранить изображение  САП</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="open_file_6">
+   <widget class="QPushButton" name="get_img">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -251,17 +251,13 @@
       </rect>
      </property>
      <property name="text">
-      <string/>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>resources/add_RCA.png</normaloff>resources/add_RCA.png</iconset>
+      <string>Изменение параметров РСА</string>
      </property>
     </widget>
    </widget>
    <widget class="QPushButton" name="open_file_7">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -281,7 +277,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>786</width>
+     <width>774</width>
      <height>21</height>
     </rect>
    </property>
@@ -293,11 +289,11 @@
   <tabstop>change_RSA</tabstop>
   <tabstop>canvas_RSA</tabstop>
   <tabstop>add_RSA</tabstop>
-  <tabstop>open_file_3</tabstop>
+  <tabstop>create_SAP</tabstop>
   <tabstop>open_file_4</tabstop>
   <tabstop>canvas_SAP</tabstop>
   <tabstop>open_file_5</tabstop>
-  <tabstop>open_file_6</tabstop>
+  <tabstop>get_img</tabstop>
  </tabstops>
  <resources>
   <include location="resources.qrc"/>
