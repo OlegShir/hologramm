@@ -3,9 +3,7 @@ import os.path
 from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtGui import QPixmap
 from modules.base_RSA import Adapter
-
-
-
+from modules.SAP import TableSAP
 
 
 class add_RCA(QtWidgets.QDialog):
@@ -45,6 +43,8 @@ class MainForm(QtWidgets.QMainWindow):
         self.file_name: str = ''
         # если выбрана голограмма
         self.selected_hologram: str = ''
+        # временное хранение данных о РСА если обработка уже осуществлялась (загрузка изображения)
+        self.type_RSA_for_img: str = ''
 
         # загрузка файла интерфейса основного окна
         uic.loadUi('qt_forms/qt_main_new2.ui', self)
@@ -56,9 +56,11 @@ class MainForm(QtWidgets.QMainWindow):
         self.get_img.clicked.connect(self.getting_img)
         # нажатие вывести создать САП
         self.create_SAP.clicked.connect(self.creating_SAP)
+        self.add_element_SAP.clicked.connect(self.creating_element_SAP)
+        self.del_element_SAP.clicked.connect(self.delete_element_SAP)
         # обновление данных о РСА
         self.get_RSA()
-        self.creating_SAP()
+        # показ окна программы
         self.show()
 
     def get_file(self) -> None:
@@ -82,7 +84,7 @@ class MainForm(QtWidgets.QMainWindow):
                    or not os.path.exists(f'{self.file_path_prj}/{self.file_name}.json'):
                     print(
                         'Отсутствуют файл голограммы или параметров РСА\nОткройте фаил голограммы')
-                    #return
+                    # return
                 # вывод изобажения на канвас
                 scene = QtWidgets.QGraphicsScene(self)
                 pixmap = QPixmap(file_path)
@@ -90,10 +92,21 @@ class MainForm(QtWidgets.QMainWindow):
                 scene.addItem(QtWidgets.QGraphicsPixmapItem(pixmap.scaled(
                     self.canvas_RSA.width()*2, self.canvas_RSA.height()*2)))
                 self.canvas_RSA.setScene(scene)
-                self.activate_gui(self.create_SAP)
+                # установка в "выбор типа РСА" тип РСА из файла RSA.json
+                info_RSA = Adapter(
+                    'json', f'{self.file_path_prj}/{self.file_name}.json')
+                type_RSA_img = info_RSA.connect.get_info_RSA()
+                if type_RSA_img in self.list_RSA:
+                    self.type_RSA_for_img = type_RSA_img
+                    self.change_RSA.setCurrentText(self.type_RSA_for_img)
+                # активация кнопки "создать САП", "сохранение РЛ-изображения"
+                self.activate_gui(self.create_SAP, self.save_img_RSA)
             else:
                 self.selected_hologram = file_path
                 self.activate_gui(self.change_RSA, self.add_RSA, self.get_img)
+
+            # активация кнопки "создать САП"
+            self.activate_gui(self.create_SAP)
 
     def get_RSA(self) -> None:
         # подключение к базе РСА
@@ -112,13 +125,18 @@ class MainForm(QtWidgets.QMainWindow):
         if select_RSA:
             param_RSA = self.RSA.connect.get_list_param_RLS(select_RSA)
             print(param_RSA)
+            self.activate_gui(self.create_SAP, self.seve_img_RSA)
 
     def creating_SAP(self) -> None:
         # Set the table headers
-        self.table_SAP.setColumnCount(3)     #Set three columns
-        self.table_SAP.setRowCount(1)        
-        self.table_SAP.setHorizontalHeaderLabels(["Положение", "Вынос", "Интенсивность"])
-        
+        self.SAP = TableSAP(self.table_SAP)
+        self.activate_gui(self.solve_SAP, self.save_SAP)
+
+    def creating_element_SAP(self) -> None:
+        self.SAP.add_element()
+
+    def delete_element_SAP(self) -> None:
+        self.SAP.delete_elevent()
 
     def activate_gui(self, *args: QtWidgets, status: bool = True) -> None:
         '''Метод включает/выключает поданные элементы Qt'''
