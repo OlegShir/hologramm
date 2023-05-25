@@ -99,37 +99,37 @@ class Convolution():
             rgg_file.seek(2*self.number_complex_readings*self.N_otst, 0)
             # создание временного нового файла для свертки по вертекали
             new_file_path = self.file_path[:-3]+'rpt'
-            # чтение фрейма файла
-            new_part_rgg_file = np.frombuffer(rgg_file.read(
-                2*self.number_complex_readings), dtype='uint8')
-            # создание копии из буфера для возможности его редактивования
-            new_part_copy = new_part_rgg_file.copy()
-            # очистка буфера
-            del new_part_rgg_file
-            # формирование значений от -127 до +128 изменением формата
-            new_part_copy = new_part_copy.astype('int8')
-            # заполнение первых 128 значений нулем
-            new_part_copy[:128] = 0
-            # из удвоенного количества отсчетов дальности создается матрица в комплексном виде
-            for i in range(self.number_complex_readings):
-                stc[i] = complex(new_part_copy[2*i],
-                                 new_part_copy[2*i+1])
-            stc[self.number_complex_readings:self.power_two] = 0
-            fft_stc = sc.fft.fft(stc)
-            # создание свертки комплексного столбца и опорной функции
-            svRG = fft_stc*self.ftt_support_function_2
-            svRG = sc.fft.ifft(svRG)
-            # создание фейма для записи
-            write_frame = np.zeros(2*self.power_two)
-            write_frame[0:self.power_two] = svRG.real
-            write_frame[self.power_two:2*self.power_two] = svRG.imag
-
             with open(new_file_path, 'w') as rpt_file:
+                for i in range(self.Na): 
+                    # чтение фрейма файла
+                    new_part_rgg_file = np.frombuffer(rgg_file.read(
+                        2*self.number_complex_readings), dtype='uint8')
+                    # создание копии из буфера для возможности его редактивования
+                    new_part_copy = new_part_rgg_file.copy()
+                    # очистка буфера
+                    del new_part_rgg_file
+                    # формирование значений от -127 до +128 изменением формата
+                    new_part_copy = new_part_copy.astype('int8')
+                    # заполнение первых 128 значений нулем
+                    new_part_copy[:128] = 0
+                    # из удвоенного количества отсчетов дальности создается матрица в комплексном виде
+                    for i in range(self.number_complex_readings):
+                        stc[i] = complex(new_part_copy[2*i],
+                                        new_part_copy[2*i+1])
+                    stc[self.number_complex_readings:self.power_two] = 0
+                    fft_stc = sc.fft.fft(stc)
+                    # создание свертки комплексного столбца и опорной функции
+                    svRG = fft_stc*self.ftt_support_function_2
+                    svRG = sc.fft.ifft(svRG)
+                    # создание фейма для записи
+                    write_frame = np.zeros(2*self.power_two)
+                    write_frame[0:self.power_two] = svRG.real
+                    write_frame[self.power_two:2*self.power_two] = svRG.imag
 
-                '''for i in range(self.Na):
-                    new_part = rgg_file.read(2*self.number_complex_readings)'''
 
-    def azimuth_convolution(self, preview: bool = True, x0: int = ):
+
+    def azimuth_convolution(self, preview: bool = True, x0: int=1):
+        pass
         
 
 if __name__ == '__main__':

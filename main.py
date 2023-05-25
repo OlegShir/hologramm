@@ -58,10 +58,27 @@ class MainForm(QtWidgets.QMainWindow):
         self.create_SAP.clicked.connect(self.creating_SAP)
         self.add_element_SAP.clicked.connect(self.creating_element_SAP)
         self.del_element_SAP.clicked.connect(self.delete_element_SAP)
+        self.solve_SAP.clicked.connect(self.solving_SAP)
+
+        self.bt_get_estimation.clicked.connect(self.get_estimation)
         # обновление данных о РСА
         self.get_RSA()
+
+
+        self.change_RSA_KA.addItems(["","RadarSAT"])
+
+
         # показ окна программы
         self.show()
+    
+    def mousePressEvent(self, event):
+        if event.button():
+            # Handle left button press
+            pos = event.pos()
+            print(self.canvas_RSA.pos())
+            print(pos)
+
+    
 
     def get_file(self) -> None:
         """Метод загрузки файла голограммы (*.rgg) или изображения(*.jpg)."""
@@ -130,13 +147,21 @@ class MainForm(QtWidgets.QMainWindow):
     def creating_SAP(self) -> None:
         # Set the table headers
         self.SAP = TableSAP(self.table_SAP)
-        self.activate_gui(self.solve_SAP, self.save_SAP)
+        self.activate_gui(self.add_element_SAP)
+
+    def solving_SAP(self) -> None:
+        self.activate_gui(self.save_SAP)
 
     def creating_element_SAP(self) -> None:
+        self.activate_gui(self.del_element_SAP, self.save_SAP, self.create_SAP, self.save_param_SAP, self.solve_SAP)
         self.SAP.add_element()
 
     def delete_element_SAP(self) -> None:
         self.SAP.delete_elevent()
+
+    def get_estimation(self) -> None:
+        self.PGk.setText('18 Вт')
+        self.Ksab.setText('1,2')
 
     def activate_gui(self, *args: QtWidgets, status: bool = True) -> None:
         '''Метод включает/выключает поданные элементы Qt'''
