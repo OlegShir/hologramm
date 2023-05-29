@@ -201,8 +201,7 @@ class Convolution():
             Fakt_razb_x = int(np.ceil(QR/Nd_x)) # Для самолета Nas<<QR, следовательно Nd_x<<Fakt_razb_x
             Tau_koger_r = self.Dimp/N_razb_r  # интервал когерентности по дальности
             Tau_koger_x = Ts/N_razb_x  # интервал когерентности по азимуту
-            dTp=0  # Показатель ввода ошибки синхронизации по ППИ (если dTp=0 ошибка не вводится) 
-                   # TODO: нужен ли он
+         
             Mdop=0 # TODO: уточнить переменные 
             '''
             # Формирование cлучайной функции ЧКП
@@ -256,6 +255,8 @@ class Convolution():
 
             N1 = int(np.fix(Dimp * self.fcvant))
             LCHM = np.zeros((N1, 1))
+            for n in range(1, N1+1):
+                LCHM[n-1, 0] = np.pi * Fsp * (n-1)**2 / (N1 * fcvant) - np.pi * Fsp * (n-1) / fcvant
             w = 4 * np.pi / lamb
 
             
@@ -281,11 +282,12 @@ class Convolution():
             for i in range(QR):
                 U_sl = np.zeros((Nd_ChKP,1), dtype=complex)
                 Imp = np.zeros((Nd_ChKP,1), dtype=complex)
-                x = (-QR / 2 + i - 1) * dx
+                x = (-QR / 2 + i) * dx
                 rt = np.sqrt(R ** 2 + x ** 2)
                 ndop[i] = int(np.fix((rt - R) / self.dnr))
                 faza = LCHM + w * rt
-                Imp0 = np.exp(1j * faza)
+                Imp0 = np.sin(faza) + 1j * np.cos(faza)
+                #Imp0 = np.exp(1j * faza)
                 Imp[ndop[i] + Mdop:ndop[i] + Mdop + N1] = Imp0
                 qq = int(np.ceil(i / Nd_x))
                 U_sl[ndop[i] + Mdop:ndop[i] + Mdop + N1,i] = U_sl0_compl[:, qq]
