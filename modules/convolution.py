@@ -17,6 +17,7 @@ movement_speed - скорость движения
 """
 import numpy as np
 import scipy as sc
+from scipy import io
 
 class Convolution():
     def __init__(self,
@@ -136,7 +137,7 @@ class Convolution():
         pass
 
     def range_convolution_ChKP(self,
-                                sumRGGandChKP: bool = True, #если true - формируется суммарная РГГ, если false - то только ЧКП
+                                sumRGGandChKP: bool = False, #если true - формируется суммарная РГГ, если false - то только ЧКП
                                 impactChPK: bool = True, # показатель воздействия ЧПК
                                 razmer_ChKP_r: int = 100, # pазмер ЧКП по наклонной дальности
                                 razmer_ChKP_x: int = 450, # pазмер ЧКП по азимуту
@@ -150,18 +151,16 @@ class Convolution():
                                 Na: int = 90000    # количество считываемых импульсов
                                 ) -> None:
              
-        
-        
         # расчет переменных
         # TODO: выражение использовалось ранее
         razr_r = razr_x = 3e8/(2*self.Fsp) # разрешение по наклонной дальности и азимуту, м razr_r
         dx = self.movement_speed*self.Tpi # Шаг по азимуту dx
         # расчет интервалa синтезирования
         Nas = np.fix(self.lamb*R/2/razr_x/dx) # QR
-        Nas = int(np.fix(Nas/2)*2) # TODO: правильно?=> (5/2)*2 = 4 целое или точное, можно использоваь функцию math.trunc
+        Nas = int(np.fix(Nas/2)*2) 
         # ///////////
         Qx = self.lamb/AntX # ширина ДНА по азимуту
-        QRm = Qx*R #  объем пространства, охватываемого радарным излучением TODO: почему в матлабе ссылка на количество считываемых импульсов Na?
+        QRm = Qx*R #  объем пространства, охватываемого радарным излучением 
         QR = int(np.fix(QRm/dx/2)*2) # количество секторов в объеме пространтва
         Las = Nas*dx # общвая ширина ДНА, которая представляет собой пространственную область или объем, охватываемый радарным излучением или приемом в горизонтальной плоскости
         Ts = Las/self.movement_speed # временной интервал, необходимый для охвата всей ширины ДНА во время движения
@@ -170,8 +169,6 @@ class Convolution():
         ndop_max = int(np.fix((rt_max-R)/self.dnr)) # TODO: что за значение?   
             
         # SOLVE
-
-
         if sumRGGandChKP:
             # создание имени файла в зависимости от необходимой свертки
             if impactChPK:
@@ -187,98 +184,49 @@ class Convolution():
 
         if impactChPK:
             # формирование ЛЧМ сигнал для модели РГГ ЧКП
-            N1 = int(self.Dimp*self.fcvant) # количествово дискретных отсчетов в ЛЧМ        
-            _n = np.arange(N1)
-            LCHM = np.pi * self.Fsp * (_n**2 / (N1 * self.fcvant) - _n / self.fcvant)
-            w = 4*np.pi/self.lamb # TODO: непонятная переменная
-
+            N1 = int(np.fix(self.Dimp * self.fcvant))# количествово дискретных отсчетов в ЛЧМ
             N_razb_r = razmer_ChKP_r/razr_r  # количествово разбиений РГГ по дальности
             N_razb_x = razmer_ChKP_x/razr_x # количествово разбиений РГГ по азимуту
             Nd_r = int(np.ceil(N1/N_razb_r)) # количествово когерентных отсчетов на одном участке разбиения по дальности    
-            Nd_x = np.ceil(Nas/N_razb_x) # количествово когерентных отсчетов на одном участке разбиения по азимуту
-            # TODO: уточнить переменные
+            Nd_x = int(np.ceil(Nas/N_razb_x)) # количествово когерентных отсчетов на одном участке разбиения по азимуту
             Fakt_razb_r = int(np.ceil(N1/Nd_r)) # Fakt_razb_r может отличаться от N_razb_r на +- 1
             Fakt_razb_x = int(np.ceil(QR/Nd_x)) # Для самолета Nas<<QR, следовательно Nd_x<<Fakt_razb_x
             Tau_koger_r = self.Dimp/N_razb_r  # интервал когерентности по дальности
             Tau_koger_x = Ts/N_razb_x  # интервал когерентности по азимуту
-         
             Mdop=0 # TODO: уточнить переменные 
-            '''
-            # Формирование cлучайной функции ЧКП
-            U_sl0 = np.zeros((N1, Fakt_razb_x)) # cоздается массив U_sl0 размером (N1, Fakt_razb_x) и заполняется нулями
-            np.random.seed(2) # устанавливается начальное состояние генератора случайных чисел
-            U = (np.random.rand(Fakt_razb_r, Fakt_razb_x) - 0.5) * 2 * np.pi # генерируется случайный массив
-            #U_sl0[:, :Fakt_razb_x] = U[:N1, :] # значения из U копируются в соответствующую часть U_sl0, чтобы заполнить первые N1 строк
-            for i in range(Fakt_razb_r):
-                start_index = i * Nd_r
-                end_index = (i + 1) * Nd_r
-                U_sl0[start_index:end_index] = U[i]
-            #del U # массив U удаляется, чтобы освободить память
-            U_sl0 = U_sl0[:N1, :] # из U_sl0 выбираются только первые N1 строк.
-            U_sl0_compl = np.cos(U_sl0) + 1j * np.sin(U_sl0) # создается массив U_sl0_compl, содержащий комплексные числа, полученные из U_sl0 с помощью тригонометрических функций
-            #del U_sl0 # массив U_sl0 удаляется, чтобы освободить память
-
-            # уточнение минимальных размеров РГГ ЧКП
-            Nd_ChKP = np.ceil((N1 + ndop_max + 2 * Mdop) / 2) * 2
-            Nd_ChKP = int(np.ceil(Nd_ChKP / 2) * 2)
-
-            Rgg_ChKP = np.zeros((Nd_ChKP, QR), dtype=complex)
-            ndop = np.zeros(QR, dtype=int)
-
-            for i in range(QR):
-                U_sl = np.zeros(Nd_ChKP, dtype=complex)
-                Imp = np.zeros(Nd_ChKP, dtype=complex)
-                x = (-QR/2 + i - 1) * dx
-                rt = np.sqrt(R**2 + x**2)
-                ndop[i] = int(np.fix((rt - R) / self.dnr))
-                faza = LCHM + w * rt
-                Imp0 = np.exp(1j * faza)
-                Imp[ndop[i] + Mdop + 1:ndop[i] + Mdop + N1] = Imp0
-                qq = np.ceil(i / Nd_x)
-                U_sl[ndop[i] + Mdop + 1:ndop[i] + Mdop + N1] = U_sl0_compl[:, qq]
-                Rgg_ChKP[:, i] = Imp * U_sl
-
-
-
-            qq = np.ceil(np.arange(1, QR + 1) / Nd_x)  # cоздается массив qq, содержащий значения, полученные из деления последовательности от 1 до QR на Nd_x, округленные до ближайшего целого числа.
-            U_sl = np.tile(U_sl0_compl[:, qq.astype(int) - 1], (1, QR)) # Создается массив U_sl путем повторения соответствующих столбцов из U_sl0_compl в соответствии с qq
-            Rgg_ChKP = Imp[:, np.newaxis] * U_sl[ndop.astype(int) + Mdop, :] # Создается массив Rgg_ChKP путем поэлементного умножения Imp на соответствующие элементы из U_sl
-            del U_sl0_compl, U_sl, Imp # массивы U_sl0_compl, U_sl и Imp удаляются, чтобы освободить память
-
-            Rgg_ChKP *= AmpChkp # массив Rgg_ChKP умножается на мощьность ЧПК
-
-            Y0, X0 = Rgg_ChKP.shape # Получаются размеры массива Rgg_ChKP.
-            Rgg_ChKP2 = np.zeros((self.Ndn, X0)) # Увеличиваем размер РГГ ЧКП по наклонной дальности до размера реальной РГГ Nd
-            Rgg_ChKP2[Y_ChKP:Y0 + Y_ChKP, :] = Rgg_ChKP # Смещаем центр РГГ ЧКП на требуемую координату Y_ChKP
-            del Rgg_ChKP # массив Rgg_ChKP удаляется, чтобы освободить память
-            '''
-
-            N1 = int(np.fix(Dimp * self.fcvant))
-            LCHM = np.zeros((N1, 1))
-            for n in range(1, N1+1):
-                LCHM[n-1, 0] = np.pi * Fsp * (n-1)**2 / (N1 * fcvant) - np.pi * Fsp * (n-1) / fcvant
-            w = 4 * np.pi / lamb
-
             
-            U_sl0 = np.zeros((N1, Fakt_razb_x))
+            LCHM = np.zeros((N1, 1))
+            for n in range(N1):
+                LCHM[n,0] = np.pi * self.Fsp * n**2 / (N1 * self.fcvant) - np.pi * self.Fsp * (n) / self.fcvant
+            w = 4 * np.pi / lamb
+               
+            '''
             s = 2
             np.random.seed(s)
             U = (np.random.rand(Fakt_razb_r, Fakt_razb_x) - 0.5) * 2 * np.pi
+            '''
+            data = io.loadmat('U_rand.mat')
+            U = np.array(data['U'])
+               
+            # Создание массива U_sl0 с нулевыми значениями размера (Nd_r * Fakt_razb_r, Fakt_razb_x)
+            U_sl0 = np.zeros((Nd_r * Fakt_razb_r, Fakt_razb_x))
 
-            for z in range(Fakt_razb_x):
-                for G in range(Fakt_razb_r):
-                    U_sl0[(G - 1) * Nd_r:G * Nd_r, z] = U[G, z]
+            # Заполнение массива U_sl0 значениями из U, повторяя каждое значение Nd_r раз по оси 0
+            for i in range(Fakt_razb_x):
+                U_sl0[:, i] = U[:, i].repeat(Nd_r)
 
+            # Обрезка массива U_sl0 до размера N1
             U_sl0 = U_sl0[:N1, :]
+            # Создание комплексного массива U_sl0_compl из U_sl0, где вещественная часть - np.cos(U_sl0), мнимая часть - np.sin(U_sl0)
             U_sl0_compl = np.cos(U_sl0) + 1j * np.sin(U_sl0)
-            
+            # Вычисление размера Nd_ChKP, округленного вверх до ближайшего четного числа
             Nd_ChKP = int(np.ceil((N1 + ndop_max + 2 * Mdop) / 2)) * 2
             Nd_ChKP = int(np.ceil(Nd_ChKP / 2)) * 2
-            
+            # Создание комплексного массива Rgg_ChKP нулей размера (Nd_ChKP, QR)
             Rgg_ChKP = np.zeros((Nd_ChKP, QR), dtype=complex)
-
+            # Создание массива ndop нулей размера QR для хранения индексов
             ndop = np.zeros(QR, dtype=int)
-
+            # Вычисление значений массива ndop и заполнение массивов Imp и U_sl
             for i in range(QR):
                 U_sl = np.zeros((Nd_ChKP,1), dtype=complex)
                 Imp = np.zeros((Nd_ChKP,1), dtype=complex)
@@ -287,35 +235,41 @@ class Convolution():
                 ndop[i] = int(np.fix((rt - R) / self.dnr))
                 faza = LCHM + w * rt
                 Imp0 = np.sin(faza) + 1j * np.cos(faza)
-                #Imp0 = np.exp(1j * faza)
                 Imp[ndop[i] + Mdop:ndop[i] + Mdop + N1] = Imp0
-                qq = int(np.ceil(i / Nd_x))
-                U_sl[ndop[i] + Mdop:ndop[i] + Mdop + N1,i] = U_sl0_compl[:, qq]
-                Rgg_ChKP[:, i] = Imp * U_sl
+                qq = i // Nd_x
+                U_sl[ndop[i] + Mdop:ndop[i] + Mdop + N1,0] = U_sl0_compl[:, qq]
+                # Заполнение Rgg_ChKP значением Imp * U_sl
+                Rgg_ChKP[:, i] = np.squeeze(Imp * U_sl)
 
-            Rgg_ChKP = Rgg_ChKP * AmpChkp
+            Rgg_ChKP *= AmpChkp
+            # Получение размеров Y0 и X0 массива Rgg_ChKP
             Y0, X0 = Rgg_ChKP.shape
-            Rgg_ChKP2 = np.zeros((self.power_two, X0), dtype=complex)
+          
+            Rgg_ChKP2 = np.zeros((self.power_two, X0), dtype=np.complex128)
             Rgg_ChKP2[Y_ChKP:Y0 + Y_ChKP, :] = Rgg_ChKP
+            print(Rgg_ChKP2[6231,6063])
 
-            del U_sl0_compl#, U_sl, Imp, Imp0
+            del U, U_sl0_compl, Rgg_ChKP
+
 
             # ====== Формирование ОФ для свертки зондирующего импульса ============
-            opor = np.cos(LCHM) + 1j * np.sin(LCHM)  # фаза сигнала в комплексном виде
-            opor1 = np.zeros((self.Ndn, 1))
-            opor1[:N1] = opor
-
             N2 = N1 // 2
-            opor2 = np.zeros((self.Ndn, 1))
-            opor2[:N2] = opor1[N2:N1]
-            opor2[N2:self.Ndn] = opor1[:N2]
+            opor_funct_1 = np.zeros((self.power_two, 1), dtype=np.complex128)
+            opor_funct_1[:N1] = np.cos(LCHM) + 1j * np.sin(LCHM) # фаза сигнала в комплексном виде
+            opor_funct_2 = np.zeros((self.power_two, 1), dtype=np.complex128)
+            
+            opor_funct_2[:N2] = opor_funct_1[N2:N1]                
+            opor_funct_2[self.power_two-N2:self.power_two] = opor_funct_1[:N2]
+            # ftt работает только со стракой, поэтому производится транспонррование
+            sp_OF = np.fft.fft(opor_funct_2.T)
 
-            sp_OF = np.fft.fft(opor2)
+            del opor_funct_1, opor_funct_2, LCHM # массивы opor, opor1, opor2, LCHM удаляются, чтобы освободить память
 
-            del opor, opor1, opor2, LCHM # массивы opor, opor1, opor2, LCHM удаляются, чтобы освободить память
-
-            svRG = np.zeros(self.power_two)  # Инициализация массива размером Nd с нулями
-            stc = np.zeros(self.power_two, dtype=complex)  # Инициализация массива размером Nd с комплексными числами
+            svRG = np.zeros((self.power_two,1), dtype=np.complex128)  # Инициализация массива размером Nd с нулями
+            stc = np.zeros((self.power_two,1), dtype=np.complex128)  # Инициализация массива размером Nd с комплексными числами
+            
+            
+            
             with open(self.file_path, 'rb') as rgg_file, open(output_file_path, 'wb') as rpg_file:
                 # поиск начала считывания информации
                 rgg_file.seek(2*self.Ndn*self.N_otst, 0)
@@ -323,7 +277,7 @@ class Convolution():
                 count_progres = 0
 
                 if sumRGGandChKP:
-                    for i in range(1, Na + 1):
+                    for i in range(Na):
                         st = np.fromfile(rgg_file, dtype=np.uint8, count=Ndn*2)
                         st = np.where(st > 128, st - 256, st)  # Формирование значений от -127 до +128
                         st[:128] = 0
@@ -338,28 +292,43 @@ class Convolution():
 
                         sp_stc = np.fft.fft(stc)
                         svRG = sp_stc * sp_OF  # Умножение спектров столбца на опорную функцию
-                        svRG = np.fft.ifft(svRG)
+                        svRG = np.fft.ifft(svRG.T)
                         Rg = np.concatenate((np.real(svRG), np.imag(svRG)))
                         Rg.astype(np.float32).tofile(rpg_file)  # Запись в файл
                         count_progres += 1  # Счетчик для отображения прогресса программы
                         print(count_progres)
+
+
+       
+
                 elif not sumRGGandChKP:
-                    for i in range(1, X0 + 1):
+                    for i in range(X0):
                         stc = Rgg_ChKP2[:, i]
 
-                        sp_stc = np.fft.fft(stc)
-                        svRG = sp_stc * sp_OF  # Умножение спектров столбца на опорную функцию
+
+                        #write_file_function(stc, sp_OF, rpg_file)
+
+                        
+                        sp_stc = np.fft.fft(stc.T)
+                        
+                        svRG = sp_stc.T* sp_OF  # Умножение спектров столбца на опорную функцию
                         svRG = np.fft.ifft(svRG)
                         Rg = np.concatenate((np.real(svRG), np.imag(svRG)))
                         Rg.astype(np.float32).tofile(rpg_file)  # Запись в файл
-                        count_progres += 1  # Счетчик для отображения прогресса программы
+                        count_progres += 1  # Счетчик для отображения прогресса программы'''
 
 
 
+def write_file_function(stc, sp_OF, name_writiing_file):
+    sp_stc = np.fft.fft(stc)
+    svRG = sp_stc * sp_OF  # Умножение спектров столбца на опорную функцию
+    svRG = np.fft.ifft(svRG)
+    Rg = np.concatenate((np.real(svRG), np.imag(svRG)))
+    Rg.astype(np.float32).tofile(name_writiing_file)  # Запись в файл
 
+            
 
-
-        
+       
 
 if __name__ == '__main__':
 
