@@ -3,5 +3,20 @@
         "editor.defaultFormatter": "ms-python.python"
     },
     "python.formatting.provider": "none",
-    "python.analysis.typeCheckingMode": "basic"
+    "python.analysis.typeCheckingMode": "basic",
+    "cSpell.words": [
+        "arange",
+        "astype",
+        "Dimp",
+        "dtype",
+        "frombuffer",
+        "ifft",
+        "LCHM",
+        "loadmat",
+        "matplotlib",
+        "Nazim",
+        "pyplot",
+        "scipy",
+        "tofile"
+    ]
 }
