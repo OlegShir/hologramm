@@ -18,6 +18,8 @@ movement_speed - скорость движения
 import numpy as np
 import scipy as sc
 from scipy import io
+import matplotlib.pyplot as plt
+from typing import Tuple
 
 class Convolution():
     def __init__(self,
@@ -31,10 +33,15 @@ class Convolution():
                  file_path: str,
                  file_name: str = '',
                  movement_speed: int = 108, # скорость носителя
+                 full_RGG:bool = True,
                  ChKP_param: list =[] , # список параметров ЧКП вида []
                  ) -> None:
+        self.file_path = file_path
+        self.ChKP_param = ChKP_param
+        self.impactChPK = True if self.ChKP_param else False
+        self.full_RGG = full_RGG
+        self.path_output_rpt:str = self.get_path_output_rpt()
 
-                  
         # для ЧПК они повторяются 
         self.N_otst = 40000 # количество импульсов пропускаемых при чтении РГГ
         self.Na = 90000
@@ -51,6 +58,7 @@ class Convolution():
         self.movement_speed:float = movement_speed # скорость движения носителя
         self.AntX:float = 0.23 # размер антенны по азимуту
         self.R:int = 4180 # наклонная дальность (до объекта прикрытия)
+
         '''------------------------Рассчитываемые переменные-------------------------------'''
         self.power_two: int = 2**Ndn.bit_length() # наибольшая степени двойки для отсчетов
         self.dnr:float = 3e8/(2*self.fcvant) # шаг по дальности
@@ -63,7 +71,22 @@ class Convolution():
         self.Nas:int = int(np.fix((np.fix(self.lamb*self.R/2/self.resolution_x/self.dx))/2)*2) # расчет интервала синтезирования
         self.Las:float = self.Nas*self.dx # общая ширина ДНА, которая представляет собой пространственную область или объем, охватываемый радарным излучением или приемом в горизонтальной плоскости
         '''------------------------Инициализация ЧКП-------------------------------'''
-        self.ChKP = self.ChKP_builder(ChKP_param, self)
+        self.ChKP = self.ChKP_builder(self.ChKP_param, self)
+
+    def get_path_output_rpt(self) -> str:
+        if self.full_RGG:
+            # создание имени файла в зависимости от необходимой свертки
+            if self.impactChPK:
+                # фаил с результатами свертки по дальности суммарной РГГ (РГГ + ЧКП)
+                output_file_path = f"{self.file_path[:-4]}_with_{len(self.ChKP_param)}ChKP.rpt"
+            else:
+                # фаил с результатами свертки по дальности только исходной РГГ 
+                output_file_path = f"{self.file_path[:-4]}.rpt"
+        else:
+            # фаил с результатами свертки по дальности только ЧКП
+            output_file_path = f"{self.file_path[:-4]}_only_ChKP.rpt"
+        
+        return output_file_path
 
 
 
@@ -143,12 +166,126 @@ class Convolution():
                     write_frame[self.power_two:2*self.power_two] = svRG.imag
       
     def azimuth_convolution_ChKP(self, 
-                                sumRGGandChKP: bool = True, #если true - формируется суммарная РГГ, если false - то только ЧКП
-                                impactChPK: bool = True, # показатель воздействия ЧПК
-                                file_path_in: str = "", # путь к свернутой по дальности РГГ
-
+                                 ROI:list = [], # область РГГ, которая будет сворачиватся по азимуту в РЛИ
+                                 path_input_rpt:str = ''
                                 ):
-        pass
+        if ROI:
+            # если область задана, то производится распаковка параметров
+            N_otst_r, N_otst_y, Na, Ndrz  = ROI
+        else:
+            # если область не задана, то она равна всей РГГ
+            N_otst_r = N_otst_y = 0
+            Na = self.Na
+            Ndrz = self.Ndn
+        '''------------------------ROI--------------------
+                     ---->|N_otst_r
+                |   +-----|------------------------------+
+                |   |.....|..............................|
+                v___|_____|____Na_____...................|
+            N_otst_y|.....|///////////|..................|
+                    |.....|///////////|Ndrz..............|
+                    |.....|///////////|..................|
+                    |....................................|
+                    +------------------------------------+
+        '''
+        if not path_input_rpt:
+            # если путь не введен, то по умалчанию используется путь сохраненный при сворачивании по дальности
+            path_input_rpt = self.path_output_rpt
+        # предварительное выделение памяти для массива свертки РГГ
+        rgg1 = np.empty((Ndrz, Na), dtype=np.complex128)
+
+        with open(path_input_rpt, 'rb') as fid1:
+            fid1.seek(2 * self.power_two * N_otst_r * 4 + N_otst_y * 4)
+
+            for i in range(Na):
+                r1 = np.fromfile(fid1, dtype=np.float32, count=Ndrz)
+                fid1.seek((self.power_two - Ndrz) * 4, 1)
+                r2 = np.fromfile(fid1, dtype=np.float32, count=Ndrz)
+                fid1.seek((self.power_two - Ndrz) * 4, 1)
+                rgg1[:, i] = r1 + 1j * r2
+            
+    
+
+        """plt.figure()
+        plt.imshow(abs(np.real(rgg1)), cmap='gray', aspect='auto')
+        plt.title('РГГ суммарная')
+        plt.show()"""
+
+        # получечение размера массива
+        Ndrz0, Na0 = rgg1.shape
+        # вычисление суммы элементов по столбцам массива
+        rg_sum = np.sum(rgg1, axis=0)
+        # получение среднего значения
+        sr_rg_sum = np.mean(rg_sum)
+        # вычитание постоянной составляющей 
+        # TODO: поменять на Ndrz
+        rgg1 -= sr_rg_sum / Ndrz0
+        # определение минимальной наклонной дальности на изображении
+        R_UO = self.R
+        N_UO = 714
+        Rmin = R_UO - (N_UO - 1) * self.dnr
+        Rmax = Rmin + Ndrz0 * self.dnr
+        Rsr = R_UO
+        Nas_max = int(lamb * Rmax / (2 * self.resolution_x * self.dx))
+        [N_snos_sr, Ugol_snosa, a0] = self.get_drift_angle(rgg1,Rsr,self.dx,self.lamb)
+
+    
+        print('stop')
+
+    def get_drift_angle(self, rgg1:np.ndarray, Rsr:float, dx:float, lamb:float) -> Tuple[int, float, float]:
+        """
+        Определяет снос и угол сноса на основе РГГ.
+
+        Аргументы:
+        - rgg1 (np.ndarray): Массив РГГ размером [Ndrz0, Na0].
+        - Rsr (float): Средняя дальность для определения сноса.
+        - dx (float): Шаг по азимуту.
+        - lamb (float): Длина волны.
+
+        Возвращает кортеж с тремя значениями:
+        - N_snos_sr (int): Снос в отсчетах для Rsr.
+        - Ugol_snosa (float): Угол сноса в градусах.
+        - a0 (float): Средний доплеровский сдвиг.
+
+        """
+        [Ndrz0, Na0] = rgg1.shape # Определение размеров массива РГГ
+        # Вычисление суммы значений РГГ по строкам и вычитание среднего значения
+        rg_sum = np.sum(rgg1, axis=0)
+        sr_rg_sum = np.mean(rg_sum)
+        rg_sum -= sr_rg_sum
+        # Применение быстрого преобразования Фурье (БПФ) к сумме РГГ для получения доплеровского спектра
+        srgg1 = np.fft.fft(rg_sum)
+        Asrgg1 = np.abs(srgg1) # Вычисление амплитудного спектра
+        # Сглаживание доплеровского спектра путем обнуления значений за пределами заданного диапазона
+        Argg1 = np.fft.ifft(Asrgg1)
+        Argg1[10:-10] = 0
+        srgg1 = np.fft.fft(Argg1)
+        # Определение порогового уровня для оценивания доплеровского сдвига
+        sm = np.max(np.abs(srgg1)) * 0.9
+        srgg1[np.abs(srgg1) >= sm] = 1
+        srgg1[np.abs(srgg1) < sm] = 0
+        # Определение среднего доплеровского сдвига a0 на основе порогового уровня
+        a1, a2 = None, None
+        for i in range(Na0 - 1):
+            if srgg1[i] < srgg1[i + 1]:
+                a1 = i
+            if srgg1[i] > srgg1[i + 1]:
+                a2 = i
+        if a1 > a2: # type: ignore
+            a2 = a2 + Na0 # type: ignore
+        a0 = (a1 + a2) / 2 # type: ignore
+        if a0 > Na0 / 2:
+            a0 = a0 - Na0
+        # Вычисление сноса в отсчетах для Rsr и угла сноса в градусах
+        N_snos_x = int(a0 / Na0 * lamb * Rsr / (2 * dx ** 2))
+        alfa = np.arctan(N_snos_x * dx / Rsr) * 180 / np.pi
+        Ugol_snosa = alfa
+        N_snos_sr = N_snos_x
+        
+
+        return N_snos_sr, Ugol_snosa, a0
+
+
     
     def range_convolution_ChKP(self,
                                 sumRGGandChKP: bool = True, #если true - формируется суммарная РГГ, если false - то только ЧКП
@@ -167,20 +304,8 @@ class Convolution():
         x_max = self.dx*self.QR/2 # количество шагов азимута, которые укладываются в один интервал синтезирования
         rt_max = np.sqrt(self.R**2+x_max**2) # TODO: что за значение?
         ndop_max = int(np.fix((rt_max-self.R)/self.dnr)) # TODO: что за значение?  
-    
-        # SOLVE
-        if sumRGGandChKP:
-            # создание имени файла в зависимости от необходимой свертки
-            if impactChPK:
-                # фаил с результатами свертки по дальности суммарной РГГ (РГГ + ЧКП)
-                output_file_path = f"{self.file_path[:-4]}_with_ChKP_{razmer_ChKP_r}_{razmer_ChKP_x}.rpt"
-            else:
-                # фаил с результатами свертки по дальности только исходной РГГ 
-                output_file_path = f"{self.file_path[:-4]}.rpt"
-        else:
-            # фаил с результатами свертки по дальности только ЧКП
-            # TODO: возможно в названии необходимо только оставить ЧКП
-            output_file_path = f"{self.file_path[:-4]}_only_ChKP_{razmer_ChKP_r}_{razmer_ChKP_x}.rpt"
+        
+
 
         if impactChPK:
             # формирование ЛЧМ сигнал для модели РГГ ЧКП
@@ -267,8 +392,9 @@ class Convolution():
 
             svRG = np.zeros((self.power_two,1), dtype=np.complex128)  # Инициализация массива размером Nd с нулями
             
+
             # открытие файла голограммы и файла для записи свертки по дальности
-            with open(self.file_path, 'rb') as rgg_file, open(output_file_path, 'wb') as rpg_file:
+            with open(self.file_path, 'rb') as rgg_file, open(self.path_output_rpt, 'wb') as rpg_file:
                 # установка начала считывания голограммы
                 rgg_file.seek(2*self.Ndn*self.N_otst, 0)          
                 
@@ -314,7 +440,7 @@ class Convolution():
                       
 
     class ChKP_builder():
-        def __init__(self, ChKP_param: list, parent) -> None:
+        def __init__(self, ChKPs_param: list, parent) -> None:
             """Класс принимает параметры:
             ChKP_param: [[]]
                 ChKP_size_r - размер ЧКП по наклонной дальности;
@@ -324,7 +450,7 @@ class Convolution():
                 ChKP_location_y - координата у ЧКП внутри исходной РГГ [отсчеты].
             parent: ссылка на родительский класс
             """
-            self.ChKP_param = ChKP_param
+            self.ChKPs_param = ChKPs_param
             # инициализация переменных родительского класса
             self.RSA_param = parent
             '''------------------------Рассчитываемые переменные-------------------------------'''
@@ -335,76 +461,78 @@ class Convolution():
             self.N1 = int(np.fix(self.RSA_param.Dimp * self.RSA_param.fcvant))# количество дискретных отсчетов в ЛЧМ
             self.w = 4 * np.pi / self.RSA_param.lamb # TODO: что за значение? 
             # создание массива линейной частотной модуляции
-            self.LCHM = np.zeros((self.N1, 1))
-            for n in range(self.N1):
-                self.LCHM[n,0] = np.pi * self.RSA_param.Fsp * n**2 / (self.N1 * self.RSA_param.fcvant) - np.pi * self.RSA_param.Fsp * (n) / self.RSA_param.fcvant
+            n = np.arange(self.N1)
+            LCHM = np.pi * self.RSA_param.Fsp * n**2 / (self.N1 * self.RSA_param.fcvant) - np.pi * self.RSA_param.Fsp * (n) / self.RSA_param.fcvant
+            self.LCHM = LCHM.reshape((self.N1, 1))
+         
+        def get_ChKP_RGG(self, ChKP_param):
+            """Метод производит синтезировать РГГ ЧКП"""           
+           
+            # распаковка параметров ЧКП
+            ChKP_size_r, ChKP_size_x, Chkp_power, ChKP_location_x, ChKP_location_y = ChKP_param
+            N_razb_r = ChKP_size_r/self.RSA_param.resolution_r  # количество разбиений РГГ по дальности
+            N_razb_x = ChKP_size_x/self.RSA_param.resolution_x # количество разбиений РГГ по азимуту
+            Nd_r = int(np.ceil(self.N1/N_razb_r)) # количество когерентных отсчетов на одном участке разбиения по дальности    
+            Nd_x = int(np.ceil(self.RSA_param.Nas/N_razb_x)) # количество когерентных отсчетов на одном участке разбиения по азимуту
+            Fakt_razb_r = int(np.ceil(self.N1/Nd_r)) # Fakt_razb_r может отличаться от N_razb_r на +- 1
+            Fakt_razb_x = int(np.ceil(self.RSA_param.QR/Nd_x)) # Для самолета Nas<<QR, следовательно Nd_x<<Fakt_razb_x
+            #--TODO: нужны ли эти переменные?
+            #--Tau_koger_r = self.RSA_param.Dimp/N_razb_r  # интервал когерентности по дальности
+            #--Tau_koger_x = self.Ts/N_razb_x  # интервал когерентности по азимуту
+            Mdop=0
             
-        def get_ChKP_RGG(self):
-            """Метод производит распаковку списка параметров """
+            # формирование случайной функции ЧКП
+            '''
+            np.random.seed(2) # установка начального генератора случайной величины
+            U = (np.random.rand(Fakt_razb_r, Fakt_razb_x) - 0.5) * 2 * np.pi
+            '''
+            data = io.loadmat('U_rand.mat')
+            U = np.array(data['U'])
+
+            # создание массива с нулевыми значениями размера 
+            U_sl0 = np.zeros((Nd_r * Fakt_razb_r, Fakt_razb_x))
+
+            # Заполнение массива  значениями из U, повторяя каждое значение Nd_r раз по оси 0
+            for i in range(Fakt_razb_x):
+                U_sl0[:, i] = U[:, i].repeat(Nd_r)
+            # обрезка массива
+            U_sl0 = U_sl0[:self.N1, :]
+            # создание комплексного массива U_sl0_compl из U_sl0, где вещественная часть - np.cos(U_sl0), мнимая часть - np.sin(U_sl0)
+            U_sl0_compl = np.cos(U_sl0) + 1j * np.sin(U_sl0)
+
+            # вычисление размера, округленного вверх до ближайшего четного числа
+            Nd_ChKP = int(np.ceil((self.N1 + self.ndop_max + 2 * Mdop) / 2)) * 2
+            Nd_ChKP = int(np.ceil(Nd_ChKP / 2)) * 2
+            # Создание комплексного массива Rgg_ChKP нулей размера (Nd_ChKP, QR)
+            Rgg_ChKP = np.zeros((Nd_ChKP, self.RSA_param.QR), dtype=np.complex128)
+            # Создание массива ndop нулей размера QR для хранения индексов
+            #ndop = np.zeros(self.RSA_param.QR, dtype=int)
             
-            for i in range(len(self.ChKP_param)):
-                # распаковка параметров ЧКП
-                ChKP_size_r, ChKP_size_x, Chkp_power, ChKP_location_x, ChKP_location_y = self.ChKP_param[i]
-                N_razb_r = ChKP_size_r/self.RSA_param.resolution_r  # количество разбиений РГГ по дальности
-                N_razb_x = ChKP_size_x/self.RSA_param.resolution_x # количество разбиений РГГ по азимуту
-                Nd_r = int(np.ceil(self.N1/N_razb_r)) # количество когерентных отсчетов на одном участке разбиения по дальности    
-                Nd_x = int(np.ceil(self.RSA_param.Nas/N_razb_x)) # количество когерентных отсчетов на одном участке разбиения по азимуту
-                Fakt_razb_r = int(np.ceil(self.N1/Nd_r)) # Fakt_razb_r может отличаться от N_razb_r на +- 1
-                Fakt_razb_x = int(np.ceil(self.RSA_param.QR/Nd_x)) # Для самолета Nas<<QR, следовательно Nd_x<<Fakt_razb_x
-                #--TODO: нужны ли эти переменные?
-                #--Tau_koger_r = self.RSA_param.Dimp/N_razb_r  # интервал когерентности по дальности
-                #--Tau_koger_x = self.Ts/N_razb_x  # интервал когерентности по азимуту
-                Mdop=0
-                
-                # формирование случайной функции ЧКП
-                '''
-                np.random.seed(2) # установка начального генератора случайной величины
-                U = (np.random.rand(Fakt_razb_r, Fakt_razb_x) - 0.5) * 2 * np.pi
-                '''
-                data = io.loadmat('U_rand.mat')
-                U = np.array(data['U'])
+            indices = np.arange(self.RSA_param.QR)
+            x = (-self.RSA_param.QR  / 2 + indices) * self.RSA_param.dx
+            rt = np.sqrt(self.RSA_param.R ** 2 + x ** 2)
+            phase = self.LCHM + self.w * rt
+            ndop = (rt - self.RSA_param.R) // self.RSA_param.dnr
+            Imp0 = np.sin(phase) + 1j * np.cos(phase)
 
-                # создание массива с нулевыми значениями размера 
-                U_sl0 = np.zeros((Nd_r * Fakt_razb_r, Fakt_razb_x))
+            # Вычисление значений массива ndop и заполнение массивов Imp и U_sl
+            for i in range(self.RSA_param.QR):
+                U_sl = np.zeros((Nd_ChKP,1), dtype=complex)
+                Imp = np.zeros((Nd_ChKP,1), dtype=complex)
+                Imp[ndop[i] + Mdop:ndop[i] + Mdop + self.N1] = Imp0
+                qq = i // Nd_x
+                U_sl[ndop[i] + Mdop:ndop[i] + Mdop + self.N1,0] = U_sl0_compl[:, qq]
+                # Заполнение Rgg_ChKP значением Imp * U_sl
+                Rgg_ChKP[:, i] = (Imp * U_sl).ravel()
 
-                # Заполнение массива  значениями из U, повторяя каждое значение Nd_r раз по оси 0
-                for i in range(Fakt_razb_x):
-                    U_sl0[:, i] = U[:, i].repeat(Nd_r)
-                # обрезка массива
-                U_sl0 = U_sl0[:self.N1, :]
-                # создание комплексного массива U_sl0_compl из U_sl0, где вещественная часть - np.cos(U_sl0), мнимая часть - np.sin(U_sl0)
-                U_sl0_compl = np.cos(U_sl0) + 1j * np.sin(U_sl0)
-                # вычисление размера, округленного вверх до ближайшего четного числа
-                Nd_ChKP = int(np.ceil((self.N1 + self.ndop_max + 2 * Mdop) / 2)) * 2
-                Nd_ChKP = int(np.ceil(Nd_ChKP / 2)) * 2
-                # Создание комплексного массива Rgg_ChKP нулей размера (Nd_ChKP, QR)
-                Rgg_ChKP = np.zeros((Nd_ChKP, self.RSA_param.QR), dtype=np.complex128)
-                # Создание массива ndop нулей размера QR для хранения индексов
-                ndop = np.zeros(self.RSA_param.QR, dtype=int)
-                # Вычисление значений массива ndop и заполнение массивов Imp и U_sl
-                for i in range(self.RSA_param.QR):
-                    U_sl = np.zeros((Nd_ChKP,1), dtype=complex)
-                    Imp = np.zeros((Nd_ChKP,1), dtype=complex)
-                    x = (-self.RSA_param.QR / 2 + i) * self.RSA_param.dx
-                    rt = np.sqrt(self.RSA_param.R ** 2 + x ** 2)
-                    ndop[i] = int(np.fix((rt - self.RSA_param.R) / self.RSA_param.dnr))
-                    phase = self.LCHM + self.w * rt
-                    Imp0 = np.sin(phase) + 1j * np.cos(phase)
-                    Imp[ndop[i] + Mdop:ndop[i] + Mdop + N1] = Imp0
-                    qq = i // Nd_x
-                    U_sl[ndop[i] + Mdop:ndop[i] + Mdop + N1,0] = U_sl0_compl[:, qq]
-                    # Заполнение Rgg_ChKP значением Imp * U_sl
-                    Rgg_ChKP[:, i] = np.squeeze(Imp * U_sl)
+            Rgg_ChKP *= Chkp_power
+            # Получение размеров Y0 и X0 массива Rgg_ChKP
+            Y0, X0 = Rgg_ChKP.shape
+        
+            Rgg_ChKP2 = np.zeros((self.RSA_param.power_two, X0), dtype=np.complex128)
+            Rgg_ChKP2[ChKP_location_y:Y0 + ChKP_location_y, :] = Rgg_ChKP
 
-                Rgg_ChKP *= AmpChkp
-                # Получение размеров Y0 и X0 массива Rgg_ChKP
-                Y0, X0 = Rgg_ChKP.shape
-            
-                Rgg_ChKP2 = np.zeros((self.power_two, X0), dtype=np.complex128)
-                Rgg_ChKP2[Y_ChKP:Y0 + Y_ChKP, :] = Rgg_ChKP
-                print(Rgg_ChKP2[6231,6063])
-
-                del U, U_sl0_compl, Rgg_ChKP
+            return Rgg_ChKP2
 
 
 
@@ -451,4 +579,5 @@ if __name__ == '__main__':
 
     #sf.get_support_functions()
     #sf.range_convolution()
-    sf.range_convolution_ChKP()
+    #sf.range_convolution_ChKP()
+    sf.azimuth_convolution_ChKP([0,4000,20000,2000], 'C:/Users/X/Desktop/185900/source/185900/sv_185900_ChKP_100m_450m_v2.rpt')
