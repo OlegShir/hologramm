@@ -189,7 +189,7 @@ class Convolution():
                     +------------------------------------+
         '''
         if not path_input_rpt:
-            # если путь не введен, то по умалчанию используется путь сохраненный при сворачивании по дальности
+            # если путь не введен, то по умолчанию используется путь сохраненный при сворачивании по дальности
             path_input_rpt = self.path_output_rpt
         # предварительное выделение памяти для массива свертки РГГ
         rgg1 = np.empty((Ndrz, Na), dtype=np.complex128)
@@ -205,21 +205,44 @@ class Convolution():
                 rgg1[:, i] = r1 + 1j * r2
             
     
-
         """plt.figure()
         plt.imshow(abs(np.real(rgg1)), cmap='gray', aspect='auto')
         plt.title('РГГ суммарная')
         plt.show()"""
+        #self.mean_func(rgg1)
+        #var = {"rgg1_py": rgg1}
+        #io.savemat('rgg1_py.mat', var)
 
-        # получечение размера массива
         Ndrz0, Na0 = rgg1.shape
         # вычисление суммы элементов по столбцам массива
-        rg_sum = np.sum(rgg1, axis=0)
+        rg_sum = np.sum(rgg1, axis=0, dtype=np.complex128)
         # получение среднего значения
-        sr_rg_sum = np.mean(rg_sum)
+        sr_rg_sum = np.mean(rg_sum, dtype=np.complex128)
         # вычитание постоянной составляющей 
         # TODO: поменять на Ndrz
         rgg1 -= sr_rg_sum / Ndrz0
+
+        # Разделение на действительную и мнимую части
+        real_part = np.real(rgg1)
+        imag_part = np.imag(rgg1)
+
+        # Суммирование действительной и мнимой частей отдельно
+        sum_real = np.sum(real_part)
+        sum_imag = np.sum(imag_part)
+
+        # Объединение в комплексное число
+        sum_combined = sum_real + 1j * sum_imag
+
+        arr = np.array([1+2j, 3-4j, 5+6j, 7-8j])
+
+        # Разделение на действительную и мнимую части
+        mean_real = np.mean(np.real(sum_combined))  # Среднее значение действительной части
+        mean_imag = np.mean(np.imag(sum_combined))  # Среднее значение мнимой части
+
+        # Объединение в комплексное число
+        mean_combined2 = mean_real + 1j * mean_imag
+        
+        # получечение размера массива
         # определение минимальной наклонной дальности на изображении
         R_UO = self.R
         N_UO = 714
@@ -232,7 +255,7 @@ class Convolution():
     
         print('stop')
 
-    def get_drift_angle(self, rgg1:np.ndarray, Rsr:float, dx:float, lamb:float) -> Tuple[int, float, float]:
+    def get_drift_angle(self, rgg1 , Rsr:float, dx:float, lamb:float) -> Tuple[int, float, float]:
         """
         Определяет снос и угол сноса на основе РГГ.
 
@@ -250,8 +273,10 @@ class Convolution():
         """
         [Ndrz0, Na0] = rgg1.shape # Определение размеров массива РГГ
         # Вычисление суммы значений РГГ по строкам и вычитание среднего значения
-        rg_sum = np.sum(rgg1, axis=0)
-        sr_rg_sum = np.mean(rg_sum)
+
+        rg_sum = np.sum(rgg1, axis=0, dtype=np.complex128)
+
+        sr_rg_sum = np.mean(rg_sum, dtype=np.complex128)
         rg_sum -= sr_rg_sum
         # Применение быстрого преобразования Фурье (БПФ) к сумме РГГ для получения доплеровского спектра
         srgg1 = np.fft.fft(rg_sum)
@@ -261,19 +286,19 @@ class Convolution():
         Argg1[10:-10] = 0
         srgg1 = np.fft.fft(Argg1)
         # Определение порогового уровня для оценивания доплеровского сдвига
-        sm = np.max(np.abs(srgg1)) * 0.9
+        sm = np.max(np.abs(srgg1))
         srgg1[np.abs(srgg1) >= sm] = 1
         srgg1[np.abs(srgg1) < sm] = 0
         # Определение среднего доплеровского сдвига a0 на основе порогового уровня
-        a1, a2 = None, None
+        a1 = a2 = 0
         for i in range(Na0 - 1):
             if srgg1[i] < srgg1[i + 1]:
                 a1 = i
             if srgg1[i] > srgg1[i + 1]:
                 a2 = i
-        if a1 > a2: # type: ignore
-            a2 = a2 + Na0 # type: ignore
-        a0 = (a1 + a2) / 2 # type: ignore
+        if a1 > a2: 
+            a2 = a2 + Na0 
+        a0 = (a1 + a2) / 2
         if a0 > Na0 / 2:
             a0 = a0 - Na0
         # Вычисление сноса в отсчетах для Rsr и угла сноса в градусах
@@ -281,9 +306,37 @@ class Convolution():
         alfa = np.arctan(N_snos_x * dx / Rsr) * 180 / np.pi
         Ugol_snosa = alfa
         N_snos_sr = N_snos_x
-        
+            
+
 
         return N_snos_sr, Ugol_snosa, a0
+
+    def mean_func(self, rgg):
+        new_rgg = np.zeros((1,20000), dtype=np.complex128)
+        for i in range(20000):
+            _i = complex(0.0,0.0)
+            for j in range(2000):
+                _i += rgg[j,i]
+            new_rgg[0,i] = _i
+        
+        _z = complex(0.0,0.0)
+        for i in range(20000):
+            _z += new_rgg[0,i]
+
+        
+        
+        mean = _z/20000
+        print('stop')
+        for i in range(2000):
+            rgg[i,:]=rgg[i,:]-mean/2000
+
+        
+     
+        self.mean_func(rgg)
+
+
+
+            
 
 
     
@@ -580,4 +633,4 @@ if __name__ == '__main__':
     #sf.get_support_functions()
     #sf.range_convolution()
     #sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP([0,4000,20000,2000], 'C:/Users/X/Desktop/185900/source/185900/sv_185900_ChKP_100m_450m_v2.rpt')
+    sf.azimuth_convolution_ChKP([0,4000,20000,2000], 'C:/Users/X/Desktop/185900/sv_185900_ChKP_100m_450m_v2.rpt')

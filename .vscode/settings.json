@@ -16,6 +16,7 @@
         "matplotlib",
         "Nazim",
         "pyplot",
+        "savemat",
         "scipy",
         "tofile"
     ]
