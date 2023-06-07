@@ -6,6 +6,7 @@
     "python.analysis.typeCheckingMode": "basic",
     "cSpell.words": [
         "arange",
+        "arctan",
         "astype",
         "Dimp",
         "dtype",
@@ -15,6 +16,7 @@
         "loadmat",
         "matplotlib",
         "Nazim",
+        "ndarray",
         "pyplot",
         "savemat",
         "scipy",

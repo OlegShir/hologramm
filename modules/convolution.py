@@ -209,53 +209,33 @@ class Convolution():
         plt.imshow(abs(np.real(rgg1)), cmap='gray', aspect='auto')
         plt.title('РГГ суммарная')
         plt.show()"""
-        #self.mean_func(rgg1)
-        #var = {"rgg1_py": rgg1}
-        #io.savemat('rgg1_py.mat', var)
-
-        Ndrz0, Na0 = rgg1.shape
-        # вычисление суммы элементов по столбцам массива
-        rg_sum = np.sum(rgg1, axis=0, dtype=np.complex128)
-        # получение среднего значения
-        sr_rg_sum = np.mean(rg_sum, dtype=np.complex128)
-        # вычитание постоянной составляющей 
-        # TODO: поменять на Ndrz
-        rgg1 -= sr_rg_sum / Ndrz0
-
-        # Разделение на действительную и мнимую части
-        real_part = np.real(rgg1)
-        imag_part = np.imag(rgg1)
-
-        # Суммирование действительной и мнимой частей отдельно
-        sum_real = np.sum(real_part)
-        sum_imag = np.sum(imag_part)
-
-        # Объединение в комплексное число
-        sum_combined = sum_real + 1j * sum_imag
-
-        arr = np.array([1+2j, 3-4j, 5+6j, 7-8j])
-
-        # Разделение на действительную и мнимую части
-        mean_real = np.mean(np.real(sum_combined))  # Среднее значение действительной части
-        mean_imag = np.mean(np.imag(sum_combined))  # Среднее значение мнимой части
-
-        # Объединение в комплексное число
-        mean_combined2 = mean_real + 1j * mean_imag
-        
-        # получечение размера массива
+        Ndrz0, Na0 = rgg1.shape # Определение размеров массива РГГ
         # определение минимальной наклонной дальности на изображении
         R_UO = self.R
-        N_UO = 714
+        #TODO: Фиксировано ли значение
+        N_UO = 714 #  Номер строки в нашем РЛИ с УО на дальности R_UO
         Rmin = R_UO - (N_UO - 1) * self.dnr
-        Rmax = Rmin + Ndrz0 * self.dnr
-        Rsr = R_UO
-        Nas_max = int(lamb * Rmax / (2 * self.resolution_x * self.dx))
-        [N_snos_sr, Ugol_snosa, a0] = self.get_drift_angle(rgg1,Rsr,self.dx,self.lamb)
+        Rmax = Rmin + Ndrz * self.dnr
+        alfa = self.get_drift_angle(rgg1,R_UO,self.dx,self.lamb)
+        # Расчет N_snos_x
+        N_snos_x = np.round(np.tan(np.deg2rad(alfa)) * Rmin / self.dx).astype(int)
+        dsm0 = N_snos_x
+        # определение предельной величины высоты блока в метрах
+        Ls_sr = np.round(lamb * Rmin / (2 * self.resolution_r)).astype(int)
+        # Расчет dR
+        dR = self.lamb * (R_UO / (Ls_sr + 2 * np.abs(N_snos_x) * self.dx)) ** 2
+        #TODO: Фиксировано ли значение
+        # Высота блока в отсчетах (по изображению)
+        Ndr = 2
+        # Количество разбиений (блоков) по наклонной дальности
+        Nbl_r = np.round(Ndrz0 / Ndr).astype(int)
+        # Задание alfa0
+        alfa0 = 0
 
-    
-        print('stop')
 
-    def get_drift_angle(self, rgg1 , Rsr:float, dx:float, lamb:float) -> Tuple[int, float, float]:
+
+
+    def get_drift_angle(self, rgg1 , Rsr:float, dx:float, lamb:float) -> float:
         """
         Определяет снос и угол сноса на основе РГГ.
 
@@ -286,9 +266,10 @@ class Convolution():
         Argg1[10:-10] = 0
         srgg1 = np.fft.fft(Argg1)
         # Определение порогового уровня для оценивания доплеровского сдвига
-        sm = np.max(np.abs(srgg1))
-        srgg1[np.abs(srgg1) >= sm] = 1
-        srgg1[np.abs(srgg1) < sm] = 0
+        srgg1 = np.abs(np.real(srgg1))
+        sm = np.max(srgg1)*0.9
+
+        srgg1 = np.where(srgg1 >= sm, 1, 0)
         # Определение среднего доплеровского сдвига a0 на основе порогового уровня
         a1 = a2 = 0
         for i in range(Na0 - 1):
@@ -303,13 +284,9 @@ class Convolution():
             a0 = a0 - Na0
         # Вычисление сноса в отсчетах для Rsr и угла сноса в градусах
         N_snos_x = int(a0 / Na0 * lamb * Rsr / (2 * dx ** 2))
-        alfa = np.arctan(N_snos_x * dx / Rsr) * 180 / np.pi
-        Ugol_snosa = alfa
-        N_snos_sr = N_snos_x
-            
-
-
-        return N_snos_sr, Ugol_snosa, a0
+        alfa = np.degrees(np.arctan(N_snos_x * dx / Rsr))
+     
+        return alfa
 
     def mean_func(self, rgg):
         new_rgg = np.zeros((1,20000), dtype=np.complex128)
