@@ -216,12 +216,12 @@ class Convolution():
         N_UO = 714 #  Номер строки в нашем РЛИ с УО на дальности R_UO
         Rmin = R_UO - (N_UO - 1) * self.dnr
         Rmax = Rmin + Ndrz * self.dnr
-        alfa = self.get_drift_angle(rgg1,R_UO,self.dx,self.lamb)
+        alfa = self.get_drift_angle(rgg1,R_UO,self.dx,self.lamb, Na0)
         # Расчет N_snos_x
         N_snos_x = np.round(np.tan(np.deg2rad(alfa)) * Rmin / self.dx).astype(int)
         dsm0 = N_snos_x
         # определение предельной величины высоты блока в метрах
-        Ls_sr = np.round(lamb * Rmin / (2 * self.resolution_r)).astype(int)
+        Ls_sr = np.round(lamb * Rmin / (2 * self.resolution_x)).astype(int)
         # Расчет dR
         dR = self.lamb * (R_UO / (Ls_sr + 2 * np.abs(N_snos_x) * self.dx)) ** 2
         #TODO: Фиксировано ли значение
@@ -229,13 +229,124 @@ class Convolution():
         Ndr = 2
         # Количество разбиений (блоков) по наклонной дальности
         Nbl_r = np.round(Ndrz0 / Ndr).astype(int)
-        # Задание alfa0
-        alfa0 = 0
+        # Задание alfa0 TODO: так альфа не нужен
+        alfa0 = [0]
+        # закладка на будующий цикл TODO: как определяется alfa_count и Vi_count! 
+        alfa_count = 1  
+        dsm_bl = np.zeros((Nbl_r, alfa_count), dtype=int)
+
+        for Nugol in range(alfa_count):
+            alfa = alfa0[Nugol]
+            # Если на всех дальностях снос не изменять !!!
+            N_snos_x_bl = int(np.round(np.tan(np.deg2rad(alfa)) * R_UO / self.dx))  
+
+            Vi_count = 1 
+            Vi = np.zeros(Vi_count, dtype=int)
+            for j in range(Vi_count):
+                Vi[j] = self.movement_speed
+
+                R_cb = np.zeros(Nbl_r)
+                for i in range(Nbl_r):
+                    if Nbl_r == 1:
+                        R_centr_bl = R_UO
+                        Ndr = Ndrz0
+                    else:
+                        # Наклонная дальность до центра блока в метрах
+                        R_centr_bl = Rmin + ((i+1) * Ndr - Ndr / 2) * self.dnr  
+  
+                    R_cb[i] = R_centr_bl
+
+                    Nas_bl = (lamb * R_centr_bl) // (2 * self.resolution_x * self.dx)
+                    Nas_bl = (Nas_bl // 2) * 2
+
+                    if alfa == 0:
+                        N_snos_x_bl = 0
+                    else:
+                        pass  # Здесь нужно добавить соответствующие вычисления для N_snos_x_bl
+
+                    dsm = -N_snos_x_bl
+                    dsm_bl[i, Nugol] = dsm
+
+                    Las_bl[i] = Nas_bl * self.dx / 2 + abs(N_snos_x_bl) * self.dx
+                    x_max = Las_bl[Y-1] / 2 + abs(N_snos_x_bl) * dx
+                    rt1_max_bl = np.sqrt(R_centr_bl ** 2 + x_max ** 2) - R_centr_bl
+                    N0max[Y-1] = int(np.round(rt1_max_bl / dnr))
+                    dop_Ndr = N0max[Y-1]
+
+                    if dop_Ndr > Ndrz0 - Y * Ndr:
+                        dop_Ndr = Ndrz0 - Y * Ndr
+                    elif dop_Ndr < 0:
+                        raise ValueError("Величина dop_Ndr не может быть меньше нуля")
+
+                    Ndr_bl = Ndr + dop_Ndr
+                    rgg1_bl = rgg1[(Y-1) * Ndr:Y * Ndr + dop_Ndr, :]
+                    rgg2_bl = rgg2[(Y-1) * Ndr:Y * Ndr + dop_Ndr, :]
+
+                    OF1_bl = np.zeros(Nas_bl)
+                    OF2_bl = np.zeros((Ndr_bl, Nas_bl))
+
+                    for i in range(Nas_bl):
+                        x = (-Nas_bl / 2 + dsm + i) * dx
+                        rt = np.sqrt(R_centr_bl ** 2 + x ** 2)
+                        rt1 = rt - R_centr_bl
+                        N0_bl[i] = int(np.fix(rt1 / dnr))
+                        faza = -4 * np.pi * rt / lamb
+                        OF1_bl[i] = complex(np.cos(faza), np.sin(faza))
+
+                    for i in range(Nas_bl):
+                        OF2_bl[N0_bl[i], i] = OF1_bl[i]
+
+                    OF_bl = np.zeros((Ndr_bl, Na0))
+                    Ndr_OF, Na_OF = OF2_bl.shape
+
+                    if Ndr_OF > Ndr_bl:
+                        OF2_bl = OF2_bl[:Ndr_bl, :]
+
+                    if Na0 / 2 < Nas_bl / 2 + abs(dsm):
+                        raise ValueError("Не выполняется условие Na0/2 >= Nas_bl/2 + dsm")
+
+                    OF_bl[:, int(Na0 / 2 - Nas_bl / 2 + dsm):int(Na0 / 2 + Nas_bl / 2 + dsm)] = OF2_bl
+
+                    sp_rgg1_bl = np.fft.fft2(rgg1_bl)
+                    sp_rgg2_bl = np.fft.fft2(rgg2_bl)
+                    sp_OF_bl = np.fft.fft2(OF_bl)
+
+                    RLI1_bl = sp_rgg1_bl * np.conj(sp_OF_bl)
+                    RLI2_bl = sp_rgg2_bl * np.conj(sp_OF_bl)
+
+                    RLI1_bl = np.abs(np.fft.ifft2(RLI1_bl))
+                    RLI2_bl = np.abs(np.fft.ifft2(RLI2_bl))
+
+                    RLI1[(Y-1) * Ndr:Y * Ndr, :] = RLI1_bl[:Ndr, :]
+                    RLI2[(Y-1) * Ndr:Y * Ndr, :] = RLI2_bl[:Ndr, :]
+
+                    Cykl_y = Y
+
+                RLI1 = np.fft.fftshift(RLI1, axes=1)
+                RLI2 = np.fft.fftshift(RLI2, axes=1)
+
+                Ny2 = [705, 725]
+                Nx2 = [2400, 2700]
+                UO = RLI1[Ny2[0]:Ny2[1], Nx2[0]:Nx2[1]]
+
+                # Вызов функции опр-я разрешения по УО и координат Максимума
+                fig = plt.figure()
+                [razr_x[Qv, Nugol], razr_y[Qv, Nugol], Amp[Qv, Nugol], Nx02[Qv, Nugol],
+                Ny02[Qv, Nugol]] = Funct_razr_po_UO(UO, dnr, dx, Nx2, Ny2, V, alfa)
+
+                fig = plt.figure()
+                plt.imshow(RLI1 * 0.001, cmap='gray')
+                plt.title('АРЛИ сформированное по суммарной РГГ')
+                plt.plot([Nx02[Qv, Nugol] - 1, Nx02[Qv, Nugol] + 1], [Ny02[Qv, Nugol] - 1, Ny02[Qv, Nugol] + 1], 'r', linewidth=2)
+                plt.plot([Nx02[Qv, Nugol] - 1, Nx02[Qv, Nugol] + 1], [Ny02[Qv, Nugol] + 1, Ny02[Qv, Nugol] - 1], 'r', linewidth=2)
+
+                fig = plt.figure()
+                plt.imshow(RLI2 * 0.003, cmap='gray')
+                plt.title('АРЛИ ЧКП')
 
 
 
-
-    def get_drift_angle(self, rgg1 , Rsr:float, dx:float, lamb:float) -> float:
+    def get_drift_angle(self, rgg1 , Rsr:float, dx:float, lamb:float, Na0:int) -> float:
         """
         Определяет снос и угол сноса на основе РГГ.
 
@@ -246,16 +357,11 @@ class Convolution():
         - lamb (float): Длина волны.
 
         Возвращает кортеж с тремя значениями:
-        - N_snos_sr (int): Снос в отсчетах для Rsr.
         - Ugol_snosa (float): Угол сноса в градусах.
-        - a0 (float): Средний доплеровский сдвиг.
-
         """
-        [Ndrz0, Na0] = rgg1.shape # Определение размеров массива РГГ
+
         # Вычисление суммы значений РГГ по строкам и вычитание среднего значения
-
         rg_sum = np.sum(rgg1, axis=0, dtype=np.complex128)
-
         sr_rg_sum = np.mean(rg_sum, dtype=np.complex128)
         rg_sum -= sr_rg_sum
         # Применение быстрого преобразования Фурье (БПФ) к сумме РГГ для получения доплеровского спектра
