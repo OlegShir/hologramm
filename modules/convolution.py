@@ -20,6 +20,7 @@ import scipy as sc
 from scipy import io
 import matplotlib.pyplot as plt
 from typing import Tuple
+import matplotlib.colors as mcolors
 
 class Convolution():
     def __init__(self,
@@ -229,23 +230,32 @@ class Convolution():
         Ndr = 2
         # Количество разбиений (блоков) по наклонной дальности
         Nbl_r = np.round(Ndrz0 / Ndr).astype(int)
+
+        # инициализация переменных для цикла
         # Задание alfa0 TODO: так альфа не нужен
         alfa0 = [0]
-        # закладка на будующий цикл TODO: как определяется alfa_count и Vi_count! 
+        # закладка на будущий цикл TODO: как определяется alfa_count и Vi_count! 
         alfa_count = 1  
         dsm_bl = np.zeros((Nbl_r, alfa_count), dtype=int)
+        # ----------------------------------
 
         for Nugol in range(alfa_count):
             alfa = alfa0[Nugol]
             # Если на всех дальностях снос не изменять !!!
             N_snos_x_bl = int(np.round(np.tan(np.deg2rad(alfa)) * R_UO / self.dx))  
 
+            # инициализация переменных для цикла
             Vi_count = 1 
             Vi = np.zeros(Vi_count, dtype=int)
+            # ----------------------------------
             for j in range(Vi_count):
                 Vi[j] = self.movement_speed
 
-                R_cb = np.zeros(Nbl_r)
+                # инициализация переменных для цикла
+                R_cb = Las_bl = np.zeros(Nbl_r)
+                RLI1 = np.empty((Ndrz, Na), dtype=np.complex128)
+                # ----------------------------------
+
                 for i in range(Nbl_r):
                     if Nbl_r == 1:
                         R_centr_bl = R_UO
@@ -256,7 +266,7 @@ class Convolution():
   
                     R_cb[i] = R_centr_bl
 
-                    Nas_bl = (lamb * R_centr_bl) // (2 * self.resolution_x * self.dx)
+                    Nas_bl:int = int((lamb * R_centr_bl) // (2 * self.resolution_x * self.dx))
                     Nas_bl = (Nas_bl // 2) * 2
 
                     if alfa == 0:
@@ -267,36 +277,33 @@ class Convolution():
                     dsm = -N_snos_x_bl
                     dsm_bl[i, Nugol] = dsm
 
-                    Las_bl[i] = Nas_bl * self.dx / 2 + abs(N_snos_x_bl) * self.dx
-                    x_max = Las_bl[Y-1] / 2 + abs(N_snos_x_bl) * dx
+                    Las_bl = Nas_bl * self.dx 
+                    x_max = Las_bl / 2 + abs(N_snos_x_bl) * self.dx
                     rt1_max_bl = np.sqrt(R_centr_bl ** 2 + x_max ** 2) - R_centr_bl
-                    N0max[Y-1] = int(np.round(rt1_max_bl / dnr))
-                    dop_Ndr = N0max[Y-1]
-
-                    if dop_Ndr > Ndrz0 - Y * Ndr:
-                        dop_Ndr = Ndrz0 - Y * Ndr
+                    dop_Ndr = int(np.round(rt1_max_bl / self.dnr))
+                   
+                    if dop_Ndr > Ndrz0 - (i+1) * Ndr:
+                        dop_Ndr = Ndrz0 - (i+1) * Ndr
                     elif dop_Ndr < 0:
                         raise ValueError("Величина dop_Ndr не может быть меньше нуля")
 
                     Ndr_bl = Ndr + dop_Ndr
-                    rgg1_bl = rgg1[(Y-1) * Ndr:Y * Ndr + dop_Ndr, :]
-                    rgg2_bl = rgg2[(Y-1) * Ndr:Y * Ndr + dop_Ndr, :]
+                    rgg1_bl = rgg1[i * Ndr:(i+1) * Ndr + dop_Ndr, :]
+                    #rgg2_bl = rgg2[(Y-1) * Ndr:Y * Ndr + dop_Ndr, :]
 
-                    OF1_bl = np.zeros(Nas_bl)
-                    OF2_bl = np.zeros((Ndr_bl, Nas_bl))
+                    #OF1_bl = np.zeros(Nas_bl)
+                    OF2_bl = np.zeros((Ndr_bl, Nas_bl), dtype=np.complex128)
 
-                    for i in range(Nas_bl):
-                        x = (-Nas_bl / 2 + dsm + i) * dx
-                        rt = np.sqrt(R_centr_bl ** 2 + x ** 2)
-                        rt1 = rt - R_centr_bl
-                        N0_bl[i] = int(np.fix(rt1 / dnr))
-                        faza = -4 * np.pi * rt / lamb
-                        OF1_bl[i] = complex(np.cos(faza), np.sin(faza))
+                    x = np.arange(-Nas_bl / 2 + dsm, Nas_bl / 2 + dsm) * self.dx
+                    rt = np.sqrt(R_centr_bl ** 2 + x ** 2)
+                    rt1 = rt - R_centr_bl
+                    N0_bl = np.floor(rt1 / self.dnr).astype(int)
+                    phase = -4 * np.pi * rt / lamb
+                    OF1_bl = np.cos(phase) + 1j * np.sin(phase)
+                    OF2_bl[N0_bl, np.arange(Nas_bl)] = OF1_bl
+                    
 
-                    for i in range(Nas_bl):
-                        OF2_bl[N0_bl[i], i] = OF1_bl[i]
-
-                    OF_bl = np.zeros((Ndr_bl, Na0))
+                    OF_bl = np.zeros((Ndr_bl, Na0), dtype=np.complex128)
                     Ndr_OF, Na_OF = OF2_bl.shape
 
                     if Ndr_OF > Ndr_bl:
@@ -308,41 +315,44 @@ class Convolution():
                     OF_bl[:, int(Na0 / 2 - Nas_bl / 2 + dsm):int(Na0 / 2 + Nas_bl / 2 + dsm)] = OF2_bl
 
                     sp_rgg1_bl = np.fft.fft2(rgg1_bl)
-                    sp_rgg2_bl = np.fft.fft2(rgg2_bl)
+                    #sp_rgg2_bl = np.fft.fft2(rgg2_bl)
                     sp_OF_bl = np.fft.fft2(OF_bl)
 
                     RLI1_bl = sp_rgg1_bl * np.conj(sp_OF_bl)
-                    RLI2_bl = sp_rgg2_bl * np.conj(sp_OF_bl)
+                    #RLI2_bl = sp_rgg2_bl * np.conj(sp_OF_bl)
 
                     RLI1_bl = np.abs(np.fft.ifft2(RLI1_bl))
-                    RLI2_bl = np.abs(np.fft.ifft2(RLI2_bl))
+                    #RLI2_bl = np.abs(np.fft.ifft2(RLI2_bl))
 
-                    RLI1[(Y-1) * Ndr:Y * Ndr, :] = RLI1_bl[:Ndr, :]
-                    RLI2[(Y-1) * Ndr:Y * Ndr, :] = RLI2_bl[:Ndr, :]
-
-                    Cykl_y = Y
-
+                    RLI1[i * Ndr:(i+1) * Ndr, :] = RLI1_bl[:Ndr, :]
+                    #RLI2[(Y-1) * Ndr:Y * Ndr, :] = RLI2_bl[:Ndr, :]
+  
+    
                 RLI1 = np.fft.fftshift(RLI1, axes=1)
-                RLI2 = np.fft.fftshift(RLI2, axes=1)
+                #RLI2 = np.fft.fftshift(RLI2, axes=1)
 
                 Ny2 = [705, 725]
                 Nx2 = [2400, 2700]
                 UO = RLI1[Ny2[0]:Ny2[1], Nx2[0]:Nx2[1]]
 
                 # Вызов функции опр-я разрешения по УО и координат Максимума
-                fig = plt.figure()
-                [razr_x[Qv, Nugol], razr_y[Qv, Nugol], Amp[Qv, Nugol], Nx02[Qv, Nugol],
-                Ny02[Qv, Nugol]] = Funct_razr_po_UO(UO, dnr, dx, Nx2, Ny2, V, alfa)
+                # fig = plt.figure()
+                # [razr_x[Qv, Nugol], razr_y[Qv, Nugol], Amp[Qv, Nugol], Nx02[Qv, Nugol],
+                # Ny02[Qv, Nugol]] = Funct_razr_po_UO(UO, dnr, dx, Nx2, Ny2, V, alfa)
 
-                fig = plt.figure()
-                plt.imshow(RLI1 * 0.001, cmap='gray')
-                plt.title('АРЛИ сформированное по суммарной РГГ')
-                plt.plot([Nx02[Qv, Nugol] - 1, Nx02[Qv, Nugol] + 1], [Ny02[Qv, Nugol] - 1, Ny02[Qv, Nugol] + 1], 'r', linewidth=2)
-                plt.plot([Nx02[Qv, Nugol] - 1, Nx02[Qv, Nugol] + 1], [Ny02[Qv, Nugol] + 1, Ny02[Qv, Nugol] - 1], 'r', linewidth=2)
 
-                fig = plt.figure()
-                plt.imshow(RLI2 * 0.003, cmap='gray')
-                plt.title('АРЛИ ЧКП')
+
+
+                plt.figure()
+                plt.imshow(np.abs(RLI1), cmap='gray',  aspect='auto', norm=mcolors.PowerNorm(0.3))
+                plt.title(f'АРЛИ сформированное по суммарной РГГ {ROI}')
+                plt.show()
+                # plt.plot([Nx02[Qv, Nugol] - 1, Nx02[Qv, Nugol] + 1], [Ny02[Qv, Nugol] - 1, Ny02[Qv, Nugol] + 1], 'r', linewidth=2)
+                # plt.plot([Nx02[Qv, Nugol] - 1, Nx02[Qv, Nugol] + 1], [Ny02[Qv, Nugol] + 1, Ny02[Qv, Nugol] - 1], 'r', linewidth=2)
+
+                # fig = plt.figure()
+                # plt.imshow(RLI2 * 0.003, cmap='gray')
+                # plt.title('АРЛИ ЧКП')
 
 
 
@@ -394,35 +404,6 @@ class Convolution():
      
         return alfa
 
-    def mean_func(self, rgg):
-        new_rgg = np.zeros((1,20000), dtype=np.complex128)
-        for i in range(20000):
-            _i = complex(0.0,0.0)
-            for j in range(2000):
-                _i += rgg[j,i]
-            new_rgg[0,i] = _i
-        
-        _z = complex(0.0,0.0)
-        for i in range(20000):
-            _z += new_rgg[0,i]
-
-        
-        
-        mean = _z/20000
-        print('stop')
-        for i in range(2000):
-            rgg[i,:]=rgg[i,:]-mean/2000
-
-        
-     
-        self.mean_func(rgg)
-
-
-
-            
-
-
-    
     def range_convolution_ChKP(self,
                                 sumRGGandChKP: bool = True, #если true - формируется суммарная РГГ, если false - то только ЧКП
                                 impactChPK: bool = True, # показатель воздействия ЧПК
