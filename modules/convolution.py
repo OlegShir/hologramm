@@ -442,14 +442,11 @@ class Convolution():
                 LCHM[n,0] = np.pi * self.Fsp * n**2 / (N1 * self.fcvant) - np.pi * self.Fsp * (n) / self.fcvant
             w = 4 * np.pi / lamb
                
-            '''
+            
             s = 2
             np.random.seed(s)
             U = (np.random.rand(Fakt_razb_r, Fakt_razb_x) - 0.5) * 2 * np.pi
-            '''
-            data = io.loadmat('U_rand.mat')
-            U = np.array(data['U'])
-               
+        
             # Создание массива U_sl0 с нулевыми значениями размера (Nd_r * Fakt_razb_r, Fakt_razb_x)
             U_sl0 = np.zeros((Nd_r * Fakt_razb_r, Fakt_razb_x))
 
@@ -696,5 +693,5 @@ if __name__ == '__main__':
 
     #sf.get_support_functions()
     #sf.range_convolution()
-    #sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP([0,4000,20000,2000], 'C:/Users/X/Desktop/185900/sv_185900_ChKP_100m_450m_v2.rpt')
+    sf.range_convolution_ChKP()
+    #sf.azimuth_convolution_ChKP([0,4000,20000,2000], 'C:/Users/X/Desktop/185900/sv_185900_ChKP_100m_450m_v2.rpt')
