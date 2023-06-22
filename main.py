@@ -6,6 +6,7 @@ from modules.image_viever import ImageView
 from modules.base_RSA import Adapter
 from modules.SAP import TableSAP
 import modules.file_manager as fm
+from modules.convolution2 import Convolution
 
 
 class add_RCA(QtWidgets.QDialog):
@@ -43,6 +44,8 @@ class MainForm(QtWidgets.QMainWindow):
         self.file_path_prj: str = ''
         # имя файлов проекта: изображение, голограмма, фаил описания РСА
         self.file_name: str = ''
+        # выделенное место для программы свертки
+        self.convolution: Convolution
         # если выбрана голограмма
         self.selected_hologram: str = ''
 
@@ -55,13 +58,14 @@ class MainForm(QtWidgets.QMainWindow):
         self.open_file.clicked.connect(self.opening_file)
 
         # нажатие изменение РСА
-        self.add_RSA.clicked.connect(self.added_RSA)
+        self.add_RSA.clicked.connect(self.adding_RSA)
 
         # нажатие вывести РЛ-изображение
-        self.get_img.clicked.connect(self.getting_img)
+        self.get_RLI.clicked.connect(self.getting_RLI)
 
         # нажатие вывести создать САП
         self.create_SAP.clicked.connect(self.creating_SAP)
+
         self.add_element_SAP.clicked.connect(self.creating_element_SAP)
         self.del_element_SAP.clicked.connect(self.delete_element_SAP)
         self.solve_SAP.clicked.connect(self.solving_SAP)
@@ -83,32 +87,31 @@ class MainForm(QtWidgets.QMainWindow):
             self, "Выберите голограмму или РЛ-изображение", "", "PCA (*.rgg *.jpg)")
         # если фаил выбран
         if file_path:
-            file_path_prj, file_name, file_type = fm.get_file_parameters(file_path)
+            self.file_path_prj, self.file_name, file_type = fm.get_file_parameters(file_path)
             if file_type == 'jpg' or file_type == 'JPG':
                 # проверяем существование голограммы и файла параметров РСА
-                if not os.path.exists(f'{file_path_prj}/{file_name}.rgg') \
-                   or not os.path.exists(f'{file_path_prj}/{file_name}.json'):
+                if not os.path.exists(f'{self.file_path_prj}/{self.file_name}.rgg') \
+                   or not os.path.exists(f'{self.file_path_prj}/{self.file_name}.json'):
                     print(
                         'Отсутствуют файл голограммы или параметров РСА\nОткройте фаил голограммы')
                     return
                 self.image_view.open_file(file_path)
                 # установка в "выбор типа РСА" тип РСА из файла RSA.json
-                type_RSA_img = fm.project_json_reader(f'{file_path_prj}/{file_name}.json', 'РСА')
+                type_RSA_img = fm.project_json_reader(f'{self.file_path_prj}/{self.file_name}.json', 'РСА')
+                # если РСА есть в списке
                 if type_RSA_img in self.list_RSA:
+                    # выставлянм его в поле
                     self.change_RSA.setCurrentText(type_RSA_img)
                 # активация кнопки "создать САП", "сохранение РЛ-изображения"
                 self.activate_gui(self.create_SAP, self.save_img_RSA)
             elif file_type == 'rgg':
-                self.activate_gui(self.change_RSA, self.add_RSA, self.get_img)
+                self.activate_gui(self.change_RSA, self.add_RSA, self.get_RLI)
             else:
-                pass
-
-            # активация кнопки "создать САП"
-            # self.activate_gui(self.create_SAP)
-
+                print('Данный формат не поддерживается')
 
 
     def get_RSA(self) -> None:
+        """Функция позволят получить список РСА, которые есть в программе и хранятся в json"""
         # подключение к базе РСА
         self.RSA = Adapter('json', 'RSA.json')
         # получаем все типы РСА
@@ -116,20 +119,31 @@ class MainForm(QtWidgets.QMainWindow):
         # обновление данных
         self.change_RSA.addItems(self.list_RSA)
 
-    def added_RSA(self) -> None:
+    def adding_RSA(self) -> None:
+        """Функция запускает виджет для редактирования РСА в программе"""
         RSA = add_RCA(self.list_RSA)
         RSA.exec_()  # запуск класса
 
-    def getting_img(self) -> None:
+    def getting_RLI(self) -> None:
+        """Функция полную свертку голограммы для получения РЛИ + создает фаил проекта"""
         select_RSA = self.change_RSA.currentText()
-        if select_RSA:
-            param_RSA = self.RSA.connect.get_list_param_RLS(select_RSA)
-            print(param_RSA)
-            self.activate_gui(self.create_SAP, self.seve_img_RSA)
+        if not select_RSA:
+            print('Не выбрана РСА')
+            return
+        param_RSA = self.RSA.connect.get_list_param_RLS(select_RSA)
+        # пошла свертка полной РГГ
+        '''
+        self.convolution = Convolution(param_RSA, f'{self.file_path_prj}/{self.file_name}.rgg')
+        self.convolution.range_convolution_ChKP()
+        self.convolution.azimuth_convolution_ChKP()
+        '''
+        self.activate_gui(self.create_SAP, self.seve_img_RSA)
+
 
     def creating_SAP(self) -> None:
         # Set the table headers
         self.SAP = TableSAP(self.table_SAP)
+        print(self.table_SAP.currentRow())
         self.activate_gui(self.add_element_SAP)
 
     def solving_SAP(self) -> None:

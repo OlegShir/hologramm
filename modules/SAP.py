@@ -8,8 +8,10 @@ class TableSAP:
         self.table.resizeColumnsToContents()
 
     def add_element(self) -> None:
+        # визуальное отражение
         rowPosition = self.table.rowCount()
         self.table.insertRow(rowPosition)
+        # логическое отражение
 
     def delete_elevent(self) -> None:
         if self.table.currentRow() >= 0:

@@ -79,7 +79,7 @@
      <string>РЛИ с САП</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="get_img">
+   <widget class="QPushButton" name="get_RLI">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -496,7 +496,7 @@
   <tabstop>solve_SAP</tabstop>
   <tabstop>canvas_SAP</tabstop>
   <tabstop>save_SAP</tabstop>
-  <tabstop>get_img</tabstop>
+  <tabstop>get_RLI</tabstop>
  </tabstops>
  <resources>
   <include location="resources.qrc"/>
