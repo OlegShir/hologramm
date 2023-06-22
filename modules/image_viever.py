@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter, QPixmap
 
 
@@ -11,9 +11,11 @@ class ImageView(QGraphicsView):
         self.graphics_scene = QGraphicsScene(self)
         self.setScene(self.graphics_scene)
         self.setGeometry(5, 30, 516, 350)
+
+        self.is_open_file: bool = False
         
-        # Set initial position and size values
-        self.initial_pos = 0
+        # Set initial position and size values 
+        self.initial_pos: QPoint
         self.initial_size = 0
         
         # Enable zooming
@@ -32,6 +34,7 @@ class ImageView(QGraphicsView):
         # Handle mouse press event for moving the image
         if event.button() == Qt.LeftButton: # type: ignore  
             self.initial_pos = event.pos()
+            print(type(self.initial_pos ))
             self.initial_size = self.size()
         super(ImageView, self).mousePressEvent(event)
     
@@ -46,9 +49,9 @@ class ImageView(QGraphicsView):
     
     def mouseReleaseEvent(self, event):
         # Handle mouse release event
+        if event.pos() == self.initial_pos:
+            print('Metka')
 
-        self.initial_pos = 0
-        self.initial_size = None
         super(ImageView, self).mouseReleaseEvent(event)
     
     def create_scene(self):
@@ -60,3 +63,4 @@ class ImageView(QGraphicsView):
         image = QPixmap(path_to_img)
         # Установка изображения в ImageView
         self.graphics_scene.addPixmap(image)
+        self.is_open_file = True
