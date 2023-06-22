@@ -11,12 +11,17 @@
         - параметры ЧКП, если она есть:
                         [[размер ЧКП по наклонной дальности, размер ЧКП по азимуту, мощность ЧПК,
                           координата x ЧКП внутри исходной РГГ (отсчеты), координата у ЧКП внутри исходной РГГ (отсчеты)], [...]...]
+        - режим нормализации пикселей РЛИ:
+                        "auto" (по умолчанию) - используется геометрическое преобразование
+                        "hemming" - используется усреднение Хэмминга
+                        "none" - нормализация не производится
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import time, json, datetime, random
+from scipy import io
 
 class Convolution():
     def __init__(self,
@@ -25,12 +30,14 @@ class Convolution():
                  file_name: str = '', # название файла РГГ (опционально)
                  full_RGG:bool = True, # тип обработки - если True, то обрабатывается вся РРГ, иначе только ЧКП
                  ChKP_param: list =[int] , # список параметров ЧКП вида []
+                 auto_px_norm: str = 'auto', # режим нормализации пикселей РЛИ
                  ) -> None:
         self.start_time = time.time()
         self.ChKP_param = ChKP_param     
         self.full_RGG = full_RGG
         self.file_path:str = file_path # путь до файла РГГ
         self.file_name:str = file_name # название файла РГГ (опционально)  # получение пути для сохранения
+        self.auto_px_norm = auto_px_norm
         # для ЧПК они повторяются 
         self.N_otst = 40000 # количество импульсов пропускаемых при чтении РГГ
         self.Na = 90000
@@ -132,8 +139,8 @@ class Convolution():
 
 
         # вставка для случая если сворачивается ТОЛЬКО РГГ ЧКП
-        if self.coord_ChKP:
-            pass
+        # if self.coord_ChKP:
+        #     pass
 
         with open(path_input_rpt, 'rb') as fid1:
             fid1.seek(2 * self.power_two * N_otst_r * 4 + N_otst_y * 4)
@@ -221,18 +228,18 @@ class Convolution():
 
                     x = np.arange(-Nas_bl / 2 + dsm, Nas_bl / 2 + dsm) * self.dx
                     rt = np.sqrt(R_centr_bl ** 2 + x ** 2)
-                    rt1 = rt - R_centr_bl
-                    N0_bl = np.floor(rt1 / self.dnr).astype(int)
+                    # rt1 = rt - R_centr_bl
+                    # N0_bl = (rt1 // self.dnr).astype(int)
                     phase = -4 * np.pi * rt / self.lamb
                     OF1_bl = np.cos(phase) + 1j * np.sin(phase)
-                    OF2_bl[N0_bl, np.arange(Nas_bl)] = OF1_bl
+                    OF2_bl[:Ndr_bl, np.arange(Nas_bl)] = OF1_bl
                     
 
                     OF_bl = np.zeros((Ndr_bl, Na0), dtype=np.complex128)
-                    Ndr_OF, Na_OF = OF2_bl.shape
+                    # Ndr_OF, Na_OF = OF2_bl.shape
 
-                    if Ndr_OF > Ndr_bl:
-                        OF2_bl = OF2_bl[:Ndr_bl, :]
+                    # if Ndr_OF > Ndr_bl:
+                    #     OF2_bl = OF2_bl[:Ndr_bl, :]
 
                     if Na0 / 2 < Nas_bl / 2 + abs(dsm):
                         raise ValueError("Не выполняется условие Na0/2 >= Nas_bl/2 + dsm")
@@ -256,13 +263,43 @@ class Convolution():
                 RLI1 = np.fft.fftshift(RLI1, axes=1)
                 # АРЛИ ЧКП
                 #RLI2 = np.fft.fftshift(RLI2, axes=1)
-                self.save_prj_json()
                 print(f'РГГ свернута по азимуту, время: {np.round(time.time()-self.start_time, 2)} c.')
+                aspect = 'auto'
+                # Нормализации пикселей РЛИ
+                if self.auto_px_norm == 'auto':
+                    aspect = Na/Ndrz
+                elif self.auto_px_norm == 'hemming':
+                    # TODO: организовать ввод значений
+                    px = 0.25
+                    razr_treb_x = razr_treb_y = 0.5 # Требуемое разрешение по азимуту и дальности
+                    RLI1 = self.hamming_averaging(RLI1, px, razr_treb_x, razr_treb_y)
+                elif self.auto_px_norm == 'none':
+                    pass
+       
+                # сохранение файла описания
+                self.save_prj_json()
+                # сохранение РЛ изображения
+                self.save_RLI(RLI1, aspect)
 
-                plt.figure()
-                plt.imshow(np.abs(RLI1), cmap='gray',  aspect='auto', norm=mcolors.PowerNorm(0.3))
-                plt.title(f'АРЛИ сформированное по суммарной РГГ {ROI}')
-                plt.show()
+
+    def save_RLI(self, RLI, aspect, param:list=[])->None:
+        if param:
+            pass
+                        
+        # Задание параметров для отображения
+        cmap = 'gray'
+        #aspect = 'equal'
+        norm = mcolors.PowerNorm(0.3)
+        # Создание фигуры и осей
+        fig, ax = plt.subplots()
+
+        # Отображение радиолокационного изображения
+        ax.imshow(np.abs(RLI), cmap=cmap, aspect=aspect, norm=norm)
+        ax.axis('off')  # Убираем отображение осей
+
+        # Сохранение изображения внутри осей
+        plt.savefig('rli1_image.png', dpi=2000, bbox_inches='tight',  pad_inches=0, format='png')
+
 
     def get_drift_angle(self, rgg1 , Rsr:float, Na0:int) -> float:
         """
@@ -315,11 +352,6 @@ class Convolution():
             
         # расчет переменных
         x_max = self.dx*self.QR/2 # количество шагов азимута, которые укладываются в один интервал синтезирования
-        rt_max = np.sqrt(self.R**2+x_max**2) # TODO: что за значение?
-        ndop_max = int(np.fix((rt_max-self.R)/self.dnr)) # TODO: что за значение?  
-
-    
-
         # ====== Формирование ОФ для свертки зондирующего импульса ============
         N2 = self.N1 // 2
         opor_func_1 = np.zeros((self.power_two, 1), dtype=np.complex128)
@@ -365,7 +397,7 @@ class Convolution():
                     write_frame[0:self.power_two] = svRG.real
                     write_frame[self.power_two:2*self.power_two] = svRG.imag
                     write_frame.astype(np.float32).tofile(rpg_file)  # Запись в файл
-        
+       
             else:
                 pass
                 # for i in range(X0):
@@ -377,6 +409,93 @@ class Convolution():
                 #     write_frame.astype(np.float32).tofile(rpg_file)  # Запись в файл
                     
             print(f'РГГ свернута по дальности, время: {np.round(time.time()-self.start_time, 2)} c.')
+
+    def hamming_averaging(self, RLI, px:float, permission_x:float, permission_y:float, is_rescaling: bool = True)-> np.ndarray:
+        """Усреднения Хэмминга
+        Если is_rescaling=1 - выполняем перемасштабирование РЛИ к квадратному значению размером px
+        Если is_rescaling=0 - просто выполняем осреднение без изменения размера значения
+        """
+        new_RLI = np.fft.fft2(RLI)
+        RLI = None
+        Ndf0, Naf0 = new_RLI.shape
+
+        if is_rescaling:
+            Coef_1_r = px / self.dnr  # Коэффициент переквантования РГГ по дальности
+            Coef_1_x = px / self.dx  # Коэффициент переквантования РГГ по азимуту
+
+            if Coef_1_x < 1:
+                raise ValueError('Необходима раздвижка спектра по азимуту')
+
+        
+            # Масштабирование РЛИ по координате дальности
+            if Coef_1_r < 1:
+                # Выполняем раздвижку спектра по дальности
+                Ndrz2 = int(np.fix(Ndf0 / Coef_1_r / 2) * 2)
+                Nd_zeros = np.zeros((Ndrz2 - Ndf0, Naf0))
+                new_RLI = np.vstack((new_RLI[:Ndf0//2, :], Nd_zeros, new_RLI[Ndf0//2:, :]))
+        
+            if Coef_1_r > 1:
+                # Удаляем избыточные отсчеты в спектре по дальности
+                Nr1 = int(np.fix(Ndf0 / Coef_1_r / 4) * 2)
+                new_RLI = new_RLI[Nr1:Ndf0 - Nr1, :]
+        
+            # Масштабирование РЛИ по координате азимута
+            if Coef_1_x > 1:
+                # Удаляем избыточные отсчеты в спектре по азимуту
+                Nx1 = int(np.fix(Naf0 / Coef_1_x / 4) * 2)
+                new_RLI = np.delete(new_RLI, np.s_[Nx1:Naf0-Nx1], axis=1)
+        
+            dx2 = px
+            dnr2 = px
+    
+        else:
+            dx2 = self.dx
+            dnr2 = self.dnr
+        '------------------Конец процедуры масштабирования------------------'
+        # Осреднение РЛИ
+        Ndf,Naf = new_RLI.shape
+        Coef_2_r = (permission_y / dnr2)/2  # Коэффициент осреднения РЛИ по дальности
+        Coef_2_x = (permission_x / dx2)/2  # Коэффициент осреднения РЛИ по азимуту
+        
+        # Оптимизированная аподизация Хэмминга
+        Kh = 0.08
+        Nh = 2
+        Nr1 = int(np.fix(Ndf / Coef_2_r / 4) * 2) # c extnjv pfuhe,ktybz
+        Nx1 = int(np.fix(Naf / Coef_2_x / 4) * 2)
+        
+        # Формирование модулирующих функций
+        # по x
+        MF_Hem_x = np.zeros(Naf)  
+        MF_Hem_x[0] = 1
+        _i = np.arange(1, Nx1)
+        _MF_x = Kh + (1 - Kh) * np.cos(np.pi * (_i+1) / Nx1 / 2) ** Nh
+        # заполнение начальных индексов
+        MF_Hem_x[1:Nx1] = _MF_x
+        # заполнение конечных индексов
+        MF_Hem_x[Naf-Nx1+1:] =  _MF_x[::-1]
+
+        # по y
+        MF_Hem_y= np.zeros(Ndf)  
+        _i = np.arange(1, Nr1)
+        _MF_y = Kh + (1 - Kh) * np.cos(np.pi * (_i+1) / Nr1 / 2) ** Nh
+        # заполнение начальных индексов
+        MF_Hem_y[1:Nr1] = _MF_y
+        # заполнение конечных индексов
+        MF_Hem_y[Ndf-Nr1+1:] =  _MF_y[::-1]
+    
+        # Аподизация по строкам
+        I_Hem = new_RLI * MF_Hem_x
+    
+        # Аподизация по столбцам
+        I_Hem2 = I_Hem * MF_Hem_y[:, np.newaxis]
+    
+        # Обратное преобразование Фурье
+        CRLIsr = np.fft.ifft2(I_Hem2)
+    
+        return CRLIsr
+
+
+
 
     class ChKP_builder():
         def __init__(self, ChKPs_param: list, parent) -> None:
@@ -501,6 +620,7 @@ class Convolution():
                                    'Размер антенны по азимуту':  self.AntX,
                                    'Наклонная дальность': self.R,
                                 },
+                'Путь до файла *.rpt': self.path_output_rpt,
                 'Количество добавленных ЧКП': len(self.ChKP_param),
                 'Параметры ЧКП': data_ChKP,
                 'Другие параметры': 'Другие параметры',
@@ -515,9 +635,12 @@ class Convolution():
 if __name__ == '__main__':
 
     param_RSA = [10944+64, 165500, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
-    ChKP = [[100, 450, 25, 8400, 3190], [200, 200, 200, 8500, 2500]]
-                           
-    sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900/1.rgg", ChKP_param=ChKP)
+    ChKP = [[100, 450, 25, 8400, 3190]]
+
+
+    sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900/1.rgg", ChKP_param=ChKP, auto_px_norm='hemming')
 
     sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP([0,4000,20000,2000])
+    sf.azimuth_convolution_ChKP()
+    
+   
