@@ -31,16 +31,6 @@
      <string>Открыть фаил</string>
     </property>
    </widget>
-   <widget class="QGraphicsView" name="canvas_RSA">
-    <property name="geometry">
-     <rect>
-      <x>5</x>
-      <y>30</y>
-      <width>516</width>
-      <height>350</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
@@ -501,7 +491,6 @@
  <tabstops>
   <tabstop>open_file</tabstop>
   <tabstop>change_RSA</tabstop>
-  <tabstop>canvas_RSA</tabstop>
   <tabstop>add_RSA</tabstop>
   <tabstop>create_SAP</tabstop>
   <tabstop>solve_SAP</tabstop>

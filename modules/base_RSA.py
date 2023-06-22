@@ -64,6 +64,8 @@ class SQL_connect():
 
         return list_values
 
+    def get_info_RSA(self):
+        pass
 
 if __name__ == '__main__':
     q = Adapter('json', 'example_prj/sample.json')
