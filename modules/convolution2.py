@@ -298,7 +298,7 @@ class Convolution():
         ax.axis('off')  # Убираем отображение осей
 
         # Сохранение изображения внутри осей
-        plt.savefig('rli1_image.png', dpi=2000, bbox_inches='tight',  pad_inches=0, format='png')
+        plt.savefig(f'png/rli{str(datetime.datetime.now().microsecond)}.png', dpi=2000, bbox_inches='tight',  pad_inches=0, format='png')
 
 
     def get_drift_angle(self, rgg1 , Rsr:float, Na0:int) -> float:
@@ -610,7 +610,7 @@ class Convolution():
                 'РСА': '-',
                 'Параметры РСА': {
                                    'Количество комплексных отсчетов': self.Ndn, 
-                                   'Количество зарегистрированных импульсов': self.Nazim,
+                                   'Количество зарегистрированных импульсов': self.Na,
                                    'Частота дискретизации АЦП':    self.fcvant,
                                    'Длина волны':   self.lamb, 
                                    'Период повторения импульсов':  self.Tpi,
@@ -638,9 +638,9 @@ if __name__ == '__main__':
     ChKP = [[100, 450, 25, 8400, 3190]]
 
 
-    sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900/1.rgg", ChKP_param=ChKP, auto_px_norm='hemming')
+    sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900/1.rgg", ChKP_param=ChKP, auto_px_norm='none')
 
     sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP()
+    sf.azimuth_convolution_ChKP(ROI = [0,1000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")
     
    

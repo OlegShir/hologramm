@@ -1,7 +1,6 @@
 import sys
 import os.path
 from PyQt5 import QtWidgets, uic, QtCore
-from PyQt5.QtGui import QPixmap
 from modules.image_viever import ImageView
 from modules.base_RSA import Adapter
 from modules.SAP import TableSAP
@@ -53,6 +52,7 @@ class MainForm(QtWidgets.QMainWindow):
         uic.loadUi('qt_forms/qt_main_new2.ui', self)
         # загрузка интерфейса левого окна
         self.image_view = ImageView(self)
+        self.image_view.get_link_table(self.table_SAP)
 
         # нажатие открыть фаил
         self.open_file.clicked.connect(self.opening_file)
@@ -100,7 +100,7 @@ class MainForm(QtWidgets.QMainWindow):
                 type_RSA_img = fm.project_json_reader(f'{self.file_path_prj}/{self.file_name}.json', 'РСА')
                 # если РСА есть в списке
                 if type_RSA_img in self.list_RSA:
-                    # выставлянм его в поле
+                    # выставляем его в поле
                     self.change_RSA.setCurrentText(type_RSA_img)
                 # активация кнопки "создать САП", "сохранение РЛ-изображения"
                 self.activate_gui(self.create_SAP, self.save_img_RSA)
@@ -143,7 +143,6 @@ class MainForm(QtWidgets.QMainWindow):
     def creating_SAP(self) -> None:
         # Set the table headers
         self.SAP = TableSAP(self.table_SAP)
-        print(self.table_SAP.currentRow())
         self.activate_gui(self.add_element_SAP)
 
     def solving_SAP(self) -> None:
