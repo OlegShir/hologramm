@@ -40,10 +40,10 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.label_3.setFont(font)
         self.label_3.setObjectName("label_3")
-        self.get_img = QtWidgets.QPushButton(self.centralwidget)
-        self.get_img.setEnabled(False)
-        self.get_img.setGeometry(QtCore.QRect(20, 555, 170, 30))
-        self.get_img.setObjectName("get_img")
+        self.get_RLI = QtWidgets.QPushButton(self.centralwidget)
+        self.get_RLI.setEnabled(False)
+        self.get_RLI.setGeometry(QtCore.QRect(20, 555, 170, 30))
+        self.get_RLI.setObjectName("get_RLI")
         self.Type_RSA = QtWidgets.QGroupBox(self.centralwidget)
         self.Type_RSA.setGeometry(QtCore.QRect(20, 440, 171, 101))
         self.Type_RSA.setObjectName("Type_RSA")
@@ -187,7 +187,7 @@ class Ui_MainWindow(object):
         MainWindow.setTabOrder(self.create_SAP, self.solve_SAP)
         MainWindow.setTabOrder(self.solve_SAP, self.canvas_SAP)
         MainWindow.setTabOrder(self.canvas_SAP, self.save_SAP)
-        MainWindow.setTabOrder(self.save_SAP, self.get_img)
+        MainWindow.setTabOrder(self.save_SAP, self.get_RLI)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -195,7 +195,7 @@ class Ui_MainWindow(object):
         self.open_file.setText(_translate("MainWindow", "Открыть фаил"))
         self.label_2.setText(_translate("MainWindow", "Исходное РЛИ"))
         self.label_3.setText(_translate("MainWindow", "РЛИ с САП"))
-        self.get_img.setText(_translate("MainWindow", "Вывести РЛИ"))
+        self.get_RLI.setText(_translate("MainWindow", "Вывести РЛИ"))
         self.Type_RSA.setTitle(_translate("MainWindow", "Выбор типа авиационного РСА"))
         self.add_RSA.setText(_translate("MainWindow", "Изменение параметров РСА"))
         self.save_img_RSA.setText(_translate("MainWindow", "Сохранить РЛИ "))
