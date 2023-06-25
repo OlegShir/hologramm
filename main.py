@@ -2,10 +2,12 @@ import sys
 import os.path
 from PyQt5 import QtWidgets, uic, QtCore
 from modules.image_viever import ImageView
+from modules.ChKP_table import ChkpTable
 from modules.base_RSA import Adapter
-from modules.SAP import TableSAP
 import modules.file_manager as fm
 from modules.convolution2 import Convolution
+from PyQt5.QtWidgets import QApplication, QStyleFactory
+
 
 
 class add_RCA(QtWidgets.QDialog):
@@ -50,9 +52,14 @@ class MainForm(QtWidgets.QMainWindow):
 
         # загрузка файла интерфейса основного окна
         uic.loadUi('qt_forms/qt_main_new2.ui', self)
+        # загрузка интерфейса таблицы ЧКП
+        self.table_Chkp = ChkpTable(self.tabWidget.widget(0))  
         # загрузка интерфейса левого окна
         self.image_view = ImageView(self)
-        self.image_view.get_link_table(self.table_SAP)
+        # явно передаем в левый просмиторщик таблицу ЧКП
+        self.image_view.set_link_table(self.table_Chkp)
+        # явно передаем таблицу ЧПК в левый просмиторщик
+        self.table_Chkp.image_viewer(self.image_view)
 
         # нажатие открыть фаил
         self.open_file.clicked.connect(self.opening_file)
@@ -142,18 +149,19 @@ class MainForm(QtWidgets.QMainWindow):
 
     def creating_SAP(self) -> None:
         # Set the table headers
-        self.SAP = TableSAP(self.table_SAP)
+        self.table_Chkp.activate_table()
         self.activate_gui(self.add_element_SAP)
 
     def solving_SAP(self) -> None:
+        self.table_Chkp.data_collector()
         self.activate_gui(self.save_SAP)
 
     def creating_element_SAP(self) -> None:
         self.activate_gui(self.del_element_SAP, self.save_SAP, self.create_SAP, self.save_param_SAP, self.solve_SAP)
-        self.SAP.add_element()
+        self.table_Chkp.add_element()
 
     def delete_element_SAP(self) -> None:
-        self.SAP.delete_elevent()
+        self.table_Chkp.delete_element()
 
     def get_estimation(self) -> None:
         self.PGk.setText('18 Вт')
@@ -167,5 +175,6 @@ class MainForm(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
+
     window = MainForm()
     app.exec_()
