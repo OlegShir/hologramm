@@ -169,7 +169,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -241,16 +241,6 @@
       <property name="icon">
        <iconset>
         <normaloff>resources/save_RCA.png</normaloff>resources/save_RCA.png</iconset>
-      </property>
-     </widget>
-     <widget class="QTableWidget" name="table_SAP">
-      <property name="geometry">
-       <rect>
-        <x>1</x>
-        <y>33</y>
-        <width>525</width>
-        <height>190</height>
-       </rect>
       </property>
      </widget>
      <widget class="QPushButton" name="add_element_SAP">
