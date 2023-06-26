@@ -1,6 +1,6 @@
 import sys
 import os.path
-from PyQt5 import QtWidgets, uic, QtCore
+from PyQt5 import QtWidgets, uic
 from modules.image_viewer import ImageView
 from modules.ChKP_table import ChkpTable
 from modules.base_RSA import Adapter
@@ -82,6 +82,8 @@ class MainForm(QtWidgets.QMainWindow):
         self.solve_SAP.clicked.connect(self.solving_SAP)
         # нажатие провести оценку
         self.bt_get_estimation.clicked.connect(self.get_estimation)
+        # нажатие сохранить РЛИ
+        self.save_img_RSA.clicked.connect(self.saving_img_RSA)
 
         # обновление данных о РСА
         self.get_RSA()
@@ -90,7 +92,11 @@ class MainForm(QtWidgets.QMainWindow):
         # показ окна программы
         self.show()
     
-   
+    def saving_img_RSA(self) -> None:
+        self.msg.set_text("РЛИ сохранено ...")
+
+    def saving_SAP(self) -> None:
+        self.msg.set_text("РЛИ сохранено ...")
 
     def opening_file(self) -> None:
         """Метод загрузки файла голограммы (*.rgg) или изображения(*.jpg)."""
@@ -165,10 +171,20 @@ class MainForm(QtWidgets.QMainWindow):
         #                              координата x ЧКП внутри исходной РГГ (отсчеты), координата у ЧКП внутри исходной РГГ (отсчеты)], [...]...]
         ChKP_params = self.table_Chkp.data_collector()
         if ChKP_params is not None:
-            ROI = 
-        "решене"
-        self.image_analizator.open_file("adjusted_image.png")
-        self.activate_gui(self.save_SAP)
+            ROI = self.image_view.get_visible_pixels()
+            RCA_param = [10944+64, 165500, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
+            try:
+                RLI = Convolution(RCA_param, f'{self.file_path_prj}/{self.file_name}.rgg', ChKP_param=ChKP_params, auto_px_norm='hemming')
+                RLI.range_convolution_ChKP()
+                self.msg.set_text("РГГ свернута по дальности")
+                RLI.azimuth_convolution_ChKP(ROI=ROI)
+                self.msg.set_text("РГГ свернута по азимуту")
+                "решене"
+                self.image_analizator.open_file(f'{self.file_path_prj}/{self.file_name}.png')
+                self.activate_gui(self.save_SAP)
+            except Exception as e:
+                print(e)
+                self.msg.set_text("Количество отсчетов отличается от РСА", color='r')
 
     def creating_element_SAP(self) -> None:
         self.activate_gui(self.del_element_SAP, self.save_SAP, self.create_SAP, self.save_param_SAP, self.solve_SAP)

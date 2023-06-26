@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QTableWidget
-from PyQt5.QtCore import Qt, QPoint, QPointF
-from PyQt5.QtGui import QPainter, QPixmap, QTransform
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
+from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtGui import QPainter, QPixmap
 from modules.ChKP_table import ChkpTable
 from modules.massager import MSGLabel
 from PyQt5.QtCore import QPropertyAnimation, QPoint

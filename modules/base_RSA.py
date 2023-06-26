@@ -1,6 +1,5 @@
 import json
 import sqlite3
-import os
 '''
 Количество комплексных отсчетов в канале дальности РГГ (в 1 импульсе) number_complex_readings
 Количество зарегистрированных импульсов number_registered_impulses

@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QTableWidget
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
 from PyQt5.QtCore import Qt, QPoint, QPointF
-from PyQt5.QtGui import QPainter, QPixmap, QTransform
+from PyQt5.QtGui import QPainter, QPixmap
 from modules.ChKP_table import ChkpTable
 from modules.massager import MSGLabel
 from PyQt5.QtCore import QPropertyAnimation, QPoint
@@ -100,8 +100,6 @@ class ImageView(QGraphicsView):
             animation.start()
 
             event.accept()
-
-            print(self.get_visible_pixels())
     
         super(ImageView, self).mouseMoveEvent(event)
     
@@ -153,7 +151,6 @@ class ImageView(QGraphicsView):
         self.ysize_RLI_pixmap = image.size().height()
         xratio = self.size().width() / image.size().width() 
         yratio = self.size().height()/ image.size().height()
-        print(self.size().width())
 
         return min(xratio, yratio), max(1/xratio, 1/yratio)
         
