@@ -675,7 +675,7 @@ if __name__ == '__main__':
     sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900/1.rgg", ChKP_param=ChKP, auto_px_norm='hemming')
 
     sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP(ROI=[0,1000,9944,8000])
+    sf.azimuth_convolution_ChKP(ROI=[0,2000,20000,2000])
     # sf.azimuth_convolution_ChKP()
     
    

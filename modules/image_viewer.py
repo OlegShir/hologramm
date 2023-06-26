@@ -181,7 +181,8 @@ class ImageView(QGraphicsView):
         rect = visible_rect.boundingRect()
 
         # формирование области
-        ROI_float = [rect.top(), rect.left(), rect.right()-rect.left(), rect.bottom()-rect.top()]
+        #ROI_float = [rect.left(), rect.top(), rect.right()-rect.left(), rect.bottom()-rect.top()]
+        ROI_float = [0, rect.top()/2, (rect.right()-rect.left())*10, rect.bottom()-rect.top()]
         
         ROI_countdown = [round(x) for x in ROI_float]
 

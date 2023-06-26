@@ -164,7 +164,8 @@ class MainForm(QtWidgets.QMainWindow):
         # сбор параметров ЧКП вида   [[размер ЧКП по наклонной дальности, размер ЧКП по азимуту, мощность ЧПК,
         #                              координата x ЧКП внутри исходной РГГ (отсчеты), координата у ЧКП внутри исходной РГГ (отсчеты)], [...]...]
         ChKP_params = self.table_Chkp.data_collector()
-        print(ChKP_params)
+        if ChKP_params is not None:
+            ROI = 
         "решене"
         self.image_analizator.open_file("adjusted_image.png")
         self.activate_gui(self.save_SAP)

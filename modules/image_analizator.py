@@ -102,7 +102,6 @@ class ImageAnalizator(QGraphicsView):
         self.ysize_RLI_pixmap = image.size().height()
         xratio = self.size().width() / image.size().width() 
         yratio = self.size().height()/ image.size().height()
-        print(self.size().width())
 
         return min(xratio, yratio), max(1/xratio, 1/yratio)
         
