@@ -284,6 +284,11 @@
       </property>
      </widget>
     </widget>
+    <widget class="QWidget" name="tab_3">
+     <attribute name="title">
+      <string>Обработка изображения</string>
+     </attribute>
+    </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">
       <string>Оценка энергетических характеристик</string>
@@ -462,6 +467,35 @@
       <property name="text">
        <string/>
       </property>
+     </widget>
+     <widget class="QGroupBox" name="Amp_characts">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>10</y>
+        <width>291</width>
+        <height>231</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Амплитудные характеристики изображения</string>
+      </property>
+      <widget class="QSlider" name="horizontalSlider">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>30</y>
+         <width>251</width>
+         <height>41</height>
+        </rect>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
      </widget>
     </widget>
    </widget>

@@ -9,8 +9,8 @@
         - название файла с которым будет производится сохранение
         - тип обработки
         - параметры ЧКП, если она есть:
-                        [[размер ЧКП по наклонной дальности, размер ЧКП по азимуту, мощность ЧПК,
-                          координата x ЧКП внутри исходной РГГ (отсчеты), координата у ЧКП внутри исходной РГГ (отсчеты)], [...]...]
+                        [[координата x ЧКП внутри исходной РГГ (отсчеты), координата у ЧКП внутри исходной РГГ (отсчеты),
+                          мощность ЧПК, размер ЧКП по наклонной дальности, размер ЧКП по азимуту ], [...]...]
         - режим нормализации пикселей РЛИ:
                         "auto" (по умолчанию) - используется геометрическое преобразование
                         "hemming" - используется усреднение Хэмминга
@@ -21,7 +21,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import time, json, datetime, random
-from scipy import io
+from PIL import Image
+import cv2
 
 class Convolution():
     def __init__(self,
@@ -31,6 +32,7 @@ class Convolution():
                  full_RGG:bool = True, # тип обработки - если True, то обрабатывается вся РРГ, иначе только ЧКП
                  ChKP_param: list =[int] , # список параметров ЧКП вида []
                  auto_px_norm: str = 'auto', # режим нормализации пикселей РЛИ
+                 file_path_project: str = '',
                  ) -> None:
         self.start_time = time.time()
         self.ChKP_param = ChKP_param     
@@ -38,6 +40,7 @@ class Convolution():
         self.file_path:str = file_path # путь до файла РГГ
         self.file_name:str = file_name # название файла РГГ (опционально)  # получение пути для сохранения
         self.auto_px_norm = auto_px_norm
+        self.file_path_project = file_path_project
         # для ЧПК они повторяются 
         self.N_otst = 40000 # количество импульсов пропускаемых при чтении РГГ
         self.Na = 90000
@@ -278,8 +281,38 @@ class Convolution():
        
                 # сохранение файла описания
                 self.save_prj_json()
+                self.save_RLI_PIL(RLI1)
                 # сохранение РЛ изображения
-                self.save_RLI(RLI1, aspect)
+                # self.save_RLI(RLI1, aspect)
+
+    def save_RLI_PIL(self, RLI):
+
+        # Вычисление амплитуды (модуля) комплексных чисел
+        amplitude_values = np.abs(RLI)
+
+        # Применение автоматической коррекции яркости
+        min_value = np.min(amplitude_values)
+        max_value = np.max(amplitude_values)
+        adjusted_values = (amplitude_values - min_value) / (max_value - min_value) * 255
+
+        # Округление значений и преобразование в тип данных uint8
+        adjusted_values = adjusted_values.astype(np.uint8)
+
+        # Создание объекта Image с градациями серого
+        image = Image.fromarray(adjusted_values, mode='L')
+
+        # Сохранение изображения
+        image.save(f"{self.file_path[:-4]}.png")
+        
+        # Предположим, что у вас есть изображение с именем "image.jpg"
+        image = cv2.imread(f"{self.file_path[:-4]}.png", 0)  # Загрузка изображения в оттенках серого
+
+        # Применение адаптивного гистограммного выравнивания
+        clahe = cv2.createCLAHE(clipLimit=18.0, tileGridSize=(8, 8))  # Создание объекта адаптивного гистограммного выравнивания
+        adjusted_image = clahe.apply(image)  # Применение адаптивного гистограммного выравнивания к изображению
+
+        # Сохранение откорректированного изображения
+        cv2.imwrite(f"{self.file_path[:-4]}.png", adjusted_image)
 
 
     def save_RLI(self, RLI, aspect, param:list=[])->None:
@@ -294,7 +327,7 @@ class Convolution():
         fig, ax = plt.subplots()
 
         # Отображение радиолокационного изображения
-        ax.imshow(np.abs(RLI), cmap=cmap, aspect=aspect, norm=norm)
+        ax.imshow(np.abs(RLI), cmap=cmap)
         ax.axis('off')  # Убираем отображение осей
 
         # Сохранение изображения внутри осей
@@ -501,11 +534,12 @@ class Convolution():
         def __init__(self, ChKPs_param: list, parent) -> None:
             """Класс принимает параметры:
             ChKP_param: [[]]
-                ChKP_size_r - размер ЧКП по наклонной дальности;
-                ChKP_size_x - размер ЧКП по азимуту;
-                Chkp_power - мощность ЧПК [без размера];
                 ChKP_location_x - координата x ЧКП внутри исходной РГГ [отсчеты];
                 ChKP_location_y - координата у ЧКП внутри исходной РГГ [отсчеты].
+                Chkp_power - мощность ЧПК [без размера];
+                ChKP_size_r - размер ЧКП по наклонной дальности;
+                ChKP_size_x - размер ЧКП по азимуту;
+         
             parent: ссылка на родительский класс
             """
             self.ChKPs_param = ChKPs_param
@@ -530,7 +564,7 @@ class Convolution():
             """Метод производит синтезировать РГГ ЧКП"""           
            
             # распаковка параметров ЧКП
-            ChKP_size_r, ChKP_size_x, Chkp_power, ChKP_location_x, ChKP_location_y = ChKP_param
+            ChKP_location_x, ChKP_location_y, Chkp_power, ChKP_size_r, ChKP_size_x,   = ChKP_param
             N_razb_r = ChKP_size_r/self.RSA_param.resolution_r  # количество разбиений РГГ по дальности
             N_razb_x = ChKP_size_x/self.RSA_param.resolution_x # количество разбиений РГГ по азимуту
             Nd_r = int(np.ceil(self.N1/N_razb_r)) # количество когерентных отсчетов на одном участке разбиения по дальности    
@@ -635,12 +669,13 @@ class Convolution():
 if __name__ == '__main__':
 
     param_RSA = [10944+64, 165500, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
-    ChKP = [[100, 450, 25, 8400, 3190]]
+    ChKP = [[8400, 3190, 25, 100, 450]]
 
 
-    sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900/1.rgg", ChKP_param=ChKP, auto_px_norm='none')
+    sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900/1.rgg", ChKP_param=ChKP, auto_px_norm='hemming')
 
     sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP(ROI = [0,1000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")
+    sf.azimuth_convolution_ChKP(ROI=[0,1000,9944,8000])
+    # sf.azimuth_convolution_ChKP()
     
    

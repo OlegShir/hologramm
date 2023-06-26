@@ -1,12 +1,13 @@
 import sys
 import os.path
 from PyQt5 import QtWidgets, uic, QtCore
-from modules.image_viever import ImageView
+from modules.image_viewer import ImageView
 from modules.ChKP_table import ChkpTable
 from modules.base_RSA import Adapter
 import modules.file_manager as fm
+from modules.massager import MSGLabel
 from modules.convolution2 import Convolution
-from PyQt5.QtWidgets import QApplication, QStyleFactory
+from modules.image_analizator import ImageAnalizator
 
 
 
@@ -56,27 +57,30 @@ class MainForm(QtWidgets.QMainWindow):
         self.table_Chkp = ChkpTable(self.tabWidget.widget(0))  
         # загрузка интерфейса левого окна
         self.image_view = ImageView(self)
-        # явно передаем в левый просмиторщик таблицу ЧКП
-        self.image_view.set_link_table(self.table_Chkp)
-        # явно передаем таблицу ЧПК в левый просмиторщик
-        self.table_Chkp.image_viewer(self.image_view)
+        # загрузка интерфейса правого окна
+        self.image_analizator = ImageAnalizator(self)
+        # загрузка мессенджер
+        self.msg = MSGLabel(self)
+        # явно передаем в левый вивер таблицу ЧКП и мессенджер
+        self.image_view.set_link(self.table_Chkp, self.msg)
+        # явно передаем таблицу ЧПК в левый вивер и мессенджер
+        self.table_Chkp.set_link(self.image_view, self.msg)
 
         # нажатие открыть фаил
         self.open_file.clicked.connect(self.opening_file)
-
         # нажатие изменение РСА
         self.add_RSA.clicked.connect(self.adding_RSA)
-
         # нажатие вывести РЛ-изображение
         self.get_RLI.clicked.connect(self.getting_RLI)
-
         # нажатие вывести создать САП
         self.create_SAP.clicked.connect(self.creating_SAP)
-
+        # нажатие добавить элемент САП
         self.add_element_SAP.clicked.connect(self.creating_element_SAP)
+        # нажатие удалить элемент САП
         self.del_element_SAP.clicked.connect(self.delete_element_SAP)
+        # нажатие рассчитать элемент САП
         self.solve_SAP.clicked.connect(self.solving_SAP)
-
+        # нажатие провести оценку
         self.bt_get_estimation.clicked.connect(self.get_estimation)
 
         # обновление данных о РСА
@@ -99,7 +103,7 @@ class MainForm(QtWidgets.QMainWindow):
                 # проверяем существование голограммы и файла параметров РСА
                 if not os.path.exists(f'{self.file_path_prj}/{self.file_name}.rgg') \
                    or not os.path.exists(f'{self.file_path_prj}/{self.file_name}.json'):
-                    print(
+                    self.msg.set_text(
                         'Отсутствуют файл голограммы или параметров РСА\nОткройте фаил голограммы')
                     return
                 self.image_view.open_file(file_path)
@@ -114,11 +118,12 @@ class MainForm(QtWidgets.QMainWindow):
             elif file_type == 'rgg':
                 self.activate_gui(self.change_RSA, self.add_RSA, self.get_RLI)
             else:
-                print('Данный формат не поддерживается')
+                self.msg.set_text('Данный формат не поддерживается')
 
 
     def get_RSA(self) -> None:
-        """Функция позволят получить список РСА, которые есть в программе и хранятся в json"""
+        """Функция позволят получить список РСА, которые есть в программе и хранятся в json.
+           Данные вставляются в выпадаю список 'Выбор типа авиационного РСА'"""
         # подключение к базе РСА
         self.RSA = Adapter('json', 'RSA.json')
         # получаем все типы РСА
@@ -135,16 +140,18 @@ class MainForm(QtWidgets.QMainWindow):
         """Функция полную свертку голограммы для получения РЛИ + создает фаил проекта"""
         select_RSA = self.change_RSA.currentText()
         if not select_RSA:
-            print('Не выбрана РСА')
+            self.msg.set_text('Не выбрана РСА')
             return
-        param_RSA = self.RSA.connect.get_list_param_RLS(select_RSA)
+        # сохранение параметров РСА
+        self.param_RSA = self.RSA.connect.get_list_param_RLS(select_RSA)
         # пошла свертка полной РГГ
+        self.msg.set_text("Расчет РЛИ", color= 'y')
         '''
         self.convolution = Convolution(param_RSA, f'{self.file_path_prj}/{self.file_name}.rgg')
         self.convolution.range_convolution_ChKP()
         self.convolution.azimuth_convolution_ChKP()
         '''
-        self.activate_gui(self.create_SAP, self.seve_img_RSA)
+        self.activate_gui(self.create_SAP, self.save_img_RSA)
 
 
     def creating_SAP(self) -> None:
@@ -153,7 +160,13 @@ class MainForm(QtWidgets.QMainWindow):
         self.activate_gui(self.add_element_SAP)
 
     def solving_SAP(self) -> None:
-        self.table_Chkp.data_collector()
+        """Получение РЛИ с ЧКП"""
+        # сбор параметров ЧКП вида   [[размер ЧКП по наклонной дальности, размер ЧКП по азимуту, мощность ЧПК,
+        #                              координата x ЧКП внутри исходной РГГ (отсчеты), координата у ЧКП внутри исходной РГГ (отсчеты)], [...]...]
+        ChKP_params = self.table_Chkp.data_collector()
+        print(ChKP_params)
+        "решене"
+        self.image_analizator.open_file("adjusted_image.png")
         self.activate_gui(self.save_SAP)
 
     def creating_element_SAP(self) -> None:
