@@ -32,7 +32,7 @@ class Json_connect():
 
         return list_RSA
 
-    def get_list_param_RLS(self, RLS_name: str) -> list:
+    def get_list_param_RSA(self, RLS_name: str) -> list:
         list_param_RLS = self.json_file[RLS_name]
 
         return list_param_RLS
@@ -55,7 +55,7 @@ class SQL_connect():
 
         return list_values
 
-    def get_list_param_RLS(self, RLS_name: str) -> list:
+    def get_list_param_RSA(self, RLS_name: str) -> list:
         '''Получение параметров '''
         respone = self.cur.execute(
             'SELECT * FROM RLS_param WHERE RLS_name=?', (RLS_name,)).fetchall()

@@ -98,6 +98,18 @@ class MainForm(QtWidgets.QMainWindow):
     def saving_SAP(self) -> None:
         self.msg.set_text("РЛИ сохранено ...")
 
+    
+
+    def get_RSA(self) -> None:
+        """Функция позволят получить список РСА, которые есть в программе и хранятся в json.
+           Данные вставляются в выпадаю список 'Выбор типа авиационного РСА'"""
+        # подключение к базе РСА
+        self.RSA = Adapter('json', 'RSA.json')
+        # получаем все типы РСА
+        self.list_RSA = self.RSA.connect.get_list_RSA()
+        # обновление данных
+        self.change_RSA.addItems(self.list_RSA)        
+
     def opening_file(self) -> None:
         """Метод загрузки файла голограммы (*.rgg) или изображения(*.jpg)."""
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -112,30 +124,23 @@ class MainForm(QtWidgets.QMainWindow):
                     self.msg.set_text(
                         'Отсутствуют файл голограммы или параметров РСА\nОткройте фаил голограммы')
                     return
-                self.image_view.open_file(file_path)
                 # установка в "выбор типа РСА" тип РСА из файла RSA.json
-                type_RSA_img = fm.project_json_reader(f'{self.file_path_prj}/{self.file_name}.json', 'РСА')
+                self.type_RSA_img = fm.project_json_reader(f'{self.file_path_prj}/{self.file_name}.json', 'РСА')
                 # если РСА есть в списке
-                if type_RSA_img in self.list_RSA:
+                if self.type_RSA_img in self.list_RSA:
                     # выставляем его в поле
-                    self.change_RSA.setCurrentText(type_RSA_img)
+                    self.change_RSA.setCurrentText(self.type_RSA_img)
                 # активация кнопки "создать САП", "сохранение РЛ-изображения"
+                else: 
+                    self.msg.set_text("Изображение сформировано РСА, не входящим в программу")
+                    return
+                self.image_view.open_file(file_path)
                 self.activate_gui(self.create_SAP, self.save_img_RSA)
             elif file_type == 'rgg':
                 self.activate_gui(self.change_RSA, self.add_RSA, self.get_RLI)
             else:
                 self.msg.set_text('Данный формат не поддерживается')
 
-
-    def get_RSA(self) -> None:
-        """Функция позволят получить список РСА, которые есть в программе и хранятся в json.
-           Данные вставляются в выпадаю список 'Выбор типа авиационного РСА'"""
-        # подключение к базе РСА
-        self.RSA = Adapter('json', 'RSA.json')
-        # получаем все типы РСА
-        self.list_RSA = self.RSA.connect.get_list_RSA()
-        # обновление данных
-        self.change_RSA.addItems(self.list_RSA)
 
     def adding_RSA(self) -> None:
         """Функция запускает виджет для редактирования РСА в программе"""
@@ -149,7 +154,7 @@ class MainForm(QtWidgets.QMainWindow):
             self.msg.set_text('Не выбрана РСА')
             return
         # сохранение параметров РСА
-        self.param_RSA = self.RSA.connect.get_list_param_RLS(select_RSA)
+        self.param_RSA = self.RSA.connect.get_list_param_RSA(select_RSA)
         # пошла свертка полной РГГ
         self.msg.set_text("Расчет РЛИ", color= 'y')
         '''
@@ -171,15 +176,14 @@ class MainForm(QtWidgets.QMainWindow):
         #                              координата x ЧКП внутри исходной РГГ (отсчеты), координата у ЧКП внутри исходной РГГ (отсчеты)], [...]...]
         ChKP_params = self.table_Chkp.data_collector()
         if ChKP_params is not None:
-            ROI = self.image_view.get_visible_pixels()
-            RCA_param = [10944+64, 165500, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
+            size_image, ROI_px = self.image_view.get_visible_pixels()
+            RSA_param = self.RSA.connect.get_list_param_RSA(self.type_RSA_img)
+            ChKP_params_count, ROI_count = self.get_px_in_count(ROI_px, ChKP_params, size_image, RSA_param)
+            print(ChKP_params_count, ROI_count)
             try:
-                RLI = Convolution(RCA_param, f'{self.file_path_prj}/{self.file_name}.rgg', ChKP_param=ChKP_params, auto_px_norm='hemming')
+                RLI = Convolution(RSA_param, self.file_path_prj, self.file_name, ChKP_param=ChKP_params_count, auto_px_norm='hemming')
                 RLI.range_convolution_ChKP()
-                self.msg.set_text("РГГ свернута по дальности")
-                RLI.azimuth_convolution_ChKP(ROI=ROI)
-                self.msg.set_text("РГГ свернута по азимуту")
-                "решене"
+                RLI.azimuth_convolution_ChKP(ROI=ROI_count)
                 self.image_analizator.open_file(f'{self.file_path_prj}/{self.file_name}.png')
                 self.activate_gui(self.save_SAP)
             except Exception as e:
@@ -201,6 +205,35 @@ class MainForm(QtWidgets.QMainWindow):
         '''Метод включает/выключает поданные элементы Qt'''
         for arg in args:
             arg.setEnabled(status)
+
+    def get_px_in_count(self, ROI_px, ChKP_px, size_image, RSA_param):
+        """Функция возвращает значение области свертки по азимуту в отсчетах и координаты ЧКП (перевод пикселей в отчеты)"""
+        print(ChKP_px)
+        # количество отсчетов в параметрах РСА по х и у
+        y_count_RLI, x_count_RLI, *_ = RSA_param
+        print(y_count_RLI, x_count_RLI)
+        # размеры открытого изображения в пикселях
+        y_px_RLI, x_px_RLI = size_image
+        
+        # расчет соотношений области
+        y_ratio_RLI = y_count_RLI / y_px_RLI
+        x_ratio_RLI  = x_count_RLI / x_px_RLI
+        print(y_ratio_RLI, x_ratio_RLI)
+        # перевод ROI из пикселей в отсчеты с округлением до целого
+        ROI_px[0] *= x_ratio_RLI
+        ROI_px[1] *= y_ratio_RLI
+        ROI_px[2] *= x_ratio_RLI
+        ROI_px[3] *= y_ratio_RLI
+        # перевод ЧКП из пикселей в отсчеты с округлением до целого
+        # координаты ЧКП в пикселях
+        for i in range(len(ChKP_px)):
+            ChKP_px[i][0] = round(ChKP_px[i][0]*x_ratio_RLI)
+            ChKP_px[i][1] = round(ChKP_px[i][1]*y_ratio_RLI)
+        print(ChKP_px)
+        ChKP_count = ChKP_px
+        ROI_count = [round(x) for x in ROI_px]
+
+        return ChKP_count, ROI_count
 
 
 if __name__ == "__main__":
