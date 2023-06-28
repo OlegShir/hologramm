@@ -107,12 +107,9 @@ class ChkpTable(QTableWidget):
                         value = int(item.text())
                     if column == 2:
                         data_ChKp[0] += value
-                        data_ChKp[0] *= 2
                         continue
                     if column == 3:
                         data_ChKp[1] += value
-                        data_ChKp[1] *= 1.75
-                        data_ChKp[1] = int(data_ChKp[1])
                         continue
                     data_ChKp.append(value)
                 data_ChKps.append(data_ChKp)

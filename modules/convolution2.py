@@ -21,7 +21,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import time, json, datetime, random
-from PIL import Image
+from PIL import Image, ImageOps
 import cv2
 
 class Convolution():
@@ -288,16 +288,18 @@ class Convolution():
     def save_RLI_PIL(self, RLI):
         # Вычисление амплитуды (модуля) комплексных чисел
         amplitude_values = np.abs(RLI)
-
+        
+        normalized_data = np.power(amplitude_values, .5)
+        normalized_data /= np.max(normalized_data)
         # Применение автоматической коррекции яркости
-        min_value = np.min(amplitude_values)
-        max_value = np.max(amplitude_values)
-        print(max_value, min_value)
-        adjusted_values = (amplitude_values - min_value) / (max_value - min_value) * 255
+        min_value = np.min(normalized_data)
+        max_value = np.max(normalized_data)
+  
+        adjusted_values = (normalized_data - min_value) / (max_value - min_value) * 255
 
         # Округление значений и преобразование в тип данных uint8
-        adjusted_values = adjusted_values.astype(np.uint8)*5
-
+        adjusted_values = adjusted_values.astype(np.uint8)
+        
         # Создание объекта Image с градациями серого
         image = Image.fromarray(adjusted_values, mode='L')
 
@@ -637,13 +639,13 @@ class Convolution():
 if __name__ == '__main__':
 
     param_RSA = [10944+64, 165500, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
-    ChKP = [[8400, 3190, 25, 100, 450]]
+    ChKP = [[48000, 3190, 25, 100, 450]]
 
 
     sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900", "1", ChKP_param=ChKP, auto_px_norm='hemming')
 
-    sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP(ROI=[53801, 5097, 14322, 972])
+    #sf.range_convolution_ChKP()
+    sf.azimuth_convolution_ChKP(ROI=[44000, 2000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")
  
     
    

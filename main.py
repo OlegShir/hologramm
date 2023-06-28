@@ -179,7 +179,6 @@ class MainForm(QtWidgets.QMainWindow):
             size_image, ROI_px = self.image_view.get_visible_pixels()
             RSA_param = self.RSA.connect.get_list_param_RSA(self.type_RSA_img)
             ChKP_params_count, ROI_count = self.get_px_in_count(ROI_px, ChKP_params, size_image, RSA_param)
-            print(ChKP_params_count, ROI_count)
             try:
                 RLI = Convolution(RSA_param, self.file_path_prj, self.file_name, ChKP_param=ChKP_params_count, auto_px_norm='hemming')
                 RLI.range_convolution_ChKP()
@@ -208,17 +207,16 @@ class MainForm(QtWidgets.QMainWindow):
 
     def get_px_in_count(self, ROI_px, ChKP_px, size_image, RSA_param):
         """Функция возвращает значение области свертки по азимуту в отсчетах и координаты ЧКП (перевод пикселей в отчеты)"""
-        print(ChKP_px)
+        print("ROI_px", ROI_px)
+        print("ChKP_px", ChKP_px)
         # количество отсчетов в параметрах РСА по х и у
         y_count_RLI, x_count_RLI, *_ = RSA_param
-        print(y_count_RLI, x_count_RLI)
         # размеры открытого изображения в пикселях
         y_px_RLI, x_px_RLI = size_image
         
         # расчет соотношений области
         y_ratio_RLI = y_count_RLI / y_px_RLI
         x_ratio_RLI  = x_count_RLI / x_px_RLI
-        print(y_ratio_RLI, x_ratio_RLI)
         # перевод ROI из пикселей в отсчеты с округлением до целого
         ROI_px[0] *= x_ratio_RLI
         ROI_px[1] *= y_ratio_RLI
@@ -229,9 +227,10 @@ class MainForm(QtWidgets.QMainWindow):
         for i in range(len(ChKP_px)):
             ChKP_px[i][0] = round(ChKP_px[i][0]*x_ratio_RLI)
             ChKP_px[i][1] = round(ChKP_px[i][1]*y_ratio_RLI)
-        print(ChKP_px)
         ChKP_count = ChKP_px
         ROI_count = [round(x) for x in ROI_px]
+        print("ROI_count", ROI_count)
+        print("ChKP_count", ChKP_count)
 
         return ChKP_count, ROI_count
 
