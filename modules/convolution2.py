@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import time, json, datetime, random
 from PIL import Image, ImageOps
-import cv2
+from ChKP_builder import ChKPBuider
 
 class Convolution():
     def __init__(self,
@@ -42,7 +42,7 @@ class Convolution():
         self.auto_px_norm = auto_px_norm
         self.file_path_project = file_path_project
         # для ЧПК они повторяются 
-        self.N_otst = 0 # количество импульсов пропускаемых при чтении РГГ
+        self.N_otst = 10000 # количество импульсов пропускаемых при чтении РГГ
         # self.Na = 90000
         # распаковка параметров РСА
         self.get_init_param_RSA(RSA_param)
@@ -74,7 +74,7 @@ class Convolution():
             # счетчик столбцов для ЧКП
             self.ChKP_column_count = np.zeros((len(ChKP_param) ,), dtype=int)
             # инициализация ЧКП
-            self.ChKP = self.ChKP_builder(self.ChKP_param, self)
+            self.ChKP = ChKPBuider(self.ChKP_param, self)
         else:
             self.impactChPK = False 
         self.path_output_rpt:str = self.get_path_output_rpt()
@@ -134,6 +134,9 @@ class Convolution():
                     |....................................|
                     +------------------------------------+
         '''
+        self.ROI_Na = Na
+        self.ROI_Ndrz = Ndrz
+
         if not path_input_rpt:
             # если путь не введен, то по умолчанию используется путь сохраненный при сворачивании по дальности
             path_input_rpt = self.path_output_rpt
@@ -280,32 +283,52 @@ class Convolution():
                     pass
        
                 # сохранение файла описания
-                self.save_prj_json()
-                self.save_RLI_PIL(RLI1)
+                #self.save_prj_json()
+                self.plot_plt(RLI1)
+                #self.save_RLI_PIL(RLI1)
                 # сохранение РЛ изображения
                 # self.save_RLI(RLI1, aspect)
 
     def save_RLI_PIL(self, RLI):
+        print('Нормализация изображения')
         # Вычисление амплитуды (модуля) комплексных чисел
         amplitude_values = np.abs(RLI)
-        
-        normalized_data = np.power(amplitude_values, .5)
-        normalized_data /= np.max(normalized_data)
-        # Применение автоматической коррекции яркости
-        min_value = np.min(normalized_data)
-        max_value = np.max(normalized_data)
+
   
-        adjusted_values = (normalized_data - min_value) / (max_value - min_value) * 255
+        normalizated_values = (amplitude_values / np.max(amplitude_values)) * 255
 
         # Округление значений и преобразование в тип данных uint8
-        adjusted_values = adjusted_values.astype(np.uint8)
+        normalizated_values = normalizated_values.astype(np.uint8)
+        
+        # Вычисление гистограммы
+        histogram = np.histogram(normalizated_values.flatten(), bins=256, range=(0, 255))[0]
+
+        # Кумулятивная сумма гистограммы
+        cumulative_histogram = histogram.cumsum()
+
+        # Приведение значений массива к новым значениям на основе эквализованной гистограммы
+        normalized_array = (cumulative_histogram[normalizated_values] * 255 / cumulative_histogram[-1]).astype(np.uint8)
         
         # Создание объекта Image с градациями серого
-        image = Image.fromarray(adjusted_values, mode='L')
+        image = Image.fromarray(normalized_array, mode='L')
 
         # Сохранение изображения
         image.save(f"{self.file_path}/{self.file_name}.png")
 
+    def plot_plt(self, RLI):
+        Coef_1_r = 0.25 / (1.6*self.dnr)  # Коэффициент переквантования РГГ по дальности
+        Coef_1_x = 0.25 / self.dx  # Коэффициент переквантования РГГ по азимуту
+        print(self.dnr, self.dx)
+
+        aspect = (self.ROI_Ndrz*Coef_1_x)/(self.ROI_Na*Coef_1_r)
+ 
+        # Создание фигуры с соответствующим размером
+        fig = plt.figure(frameon=False, figsize=(Coef_1_r*RLI.shape[1] / 250, Coef_1_x*RLI.shape[0] / 250), dpi=100)
+
+        plt.imshow(np.abs(RLI), cmap='gray', aspect = 'auto', norm=mcolors.PowerNorm(0.4))
+       
+        # Сохранение изображения в файл с реальными размерами, без рамки и осей
+        plt.savefig(f"{self.file_path}/{self.file_name}.png", dpi='figure', bbox_inches='tight', pad_inches=0)
 
     def get_drift_angle(self, rgg1 , Rsr:float, Na0:int) -> float:
         """
@@ -496,106 +519,6 @@ class Convolution():
         CRLIsr = np.fft.ifft2(I_Hem2)
     
         return CRLIsr
-
-
-
-
-    class ChKP_builder():
-        def __init__(self, ChKPs_param: list, parent) -> None:
-            """Класс принимает параметры:
-            ChKP_param: [[]]
-                ChKP_location_x - координата x ЧКП внутри исходной РГГ [отсчеты];
-                ChKP_location_y - координата у ЧКП внутри исходной РГГ [отсчеты].
-                Chkp_power - мощность ЧПК [без размера];
-                ChKP_size_r - размер ЧКП по наклонной дальности;
-                ChKP_size_x - размер ЧКП по азимуту;
-         
-            parent: ссылка на родительский класс
-            """
-            self.ChKPs_param = ChKPs_param
-            # инициализация переменных родительского класса
-            self.RSA_param = parent
-            '''------------------------Рассчитываемые переменные-------------------------------'''
-            self.Ts = self.RSA_param.Las/self.RSA_param.movement_speed # временной интервал, необходимый для охвата всей ширины ДНА во время движения
-            self.x_max = self.RSA_param.dx*self.RSA_param.QR/2 # количество шагов азимута, которые укладываются в один интервал синтезирования
-            self.rt_max = np.sqrt(self.RSA_param.R**2+self.x_max**2) # TODO: что за значение?
-            self.ndop_max = int(np.fix((self.rt_max-self.RSA_param.R)/self.RSA_param.dnr)) # TODO: что за значение? 
-            self.N1 = int(np.fix(self.RSA_param.Dimp * self.RSA_param.fcvant))# количество дискретных отсчетов в ЛЧМ
-            self.w = 4 * np.pi / self.RSA_param.lamb # TODO: что за значение? 
-
-            for i in range(len(ChKPs_param)):
-                coord_ChKP, RGG_ChKP = self.get_ChKP_RGG(ChKPs_param[i])
-                self.RSA_param.coord_ChKP.append(coord_ChKP)
-                self.RSA_param.RGG_ChKP.append(RGG_ChKP)
-                
-                print(f'Сформирована {i+1}-я ЧКП, время: {np.round(time.time()-self.RSA_param.start_time, 2)} c.')
-   
-        def get_ChKP_RGG(self, ChKP_param):
-            """Метод производит синтезировать РГГ ЧКП"""           
-           
-            # распаковка параметров ЧКП
-            ChKP_location_x, ChKP_location_y, Chkp_power, ChKP_size_r, ChKP_size_x,   = ChKP_param
-            N_razb_r = ChKP_size_r/self.RSA_param.resolution_r  # количество разбиений РГГ по дальности
-            N_razb_x = ChKP_size_x/self.RSA_param.resolution_x # количество разбиений РГГ по азимуту
-            Nd_r = int(np.ceil(self.N1/N_razb_r)) # количество когерентных отсчетов на одном участке разбиения по дальности    
-            Nd_x = int(np.ceil(self.RSA_param.Nas/N_razb_x)) # количество когерентных отсчетов на одном участке разбиения по азимуту
-            Fakt_razb_r = int(np.ceil(self.N1/Nd_r)) # Fakt_razb_r может отличаться от N_razb_r на +- 1
-            Fakt_razb_x = int(np.ceil(self.RSA_param.QR/Nd_x)) # Для самолета Nas<<QR, следовательно Nd_x<<Fakt_razb_x
-            Mdop=0
-            
-            # формирование случайной функции ЧКП
-            s = random.randint(1,40)
-            np.random.seed(s) # установка начального генератора случайной величины
-            U = (np.random.rand(Fakt_razb_r, Fakt_razb_x) - 0.5) * 2 * np.pi
-
-            # создание массива с нулевыми значениями размера 
-            U_sl0 = np.zeros((Nd_r * Fakt_razb_r, Fakt_razb_x))
-
-            # Заполнение массива  значениями из U, повторяя каждое значение Nd_r раз по оси 0
-            for i in range(Fakt_razb_x):
-                U_sl0[:, i] = U[:, i].repeat(Nd_r)
-            # обрезка массива
-            U_sl0 = U_sl0[:self.N1, :]
-            # создание комплексного массива U_sl0_compl из U_sl0, где вещественная часть - np.cos(U_sl0), мнимая часть - np.sin(U_sl0)
-            U_sl0_compl = np.cos(U_sl0) + 1j * np.sin(U_sl0)
-
-            # вычисление размера, округленного вверх до ближайшего четного числа
-            Nd_ChKP = int(np.ceil((self.N1 + self.ndop_max + 2 * Mdop) / 2)) * 2
-            Nd_ChKP = int(np.ceil(Nd_ChKP / 2)) * 2
-            # Создание комплексного массива Rgg_ChKP нулей размера (Nd_ChKP, QR)
-            Rgg_ChKP = np.zeros((Nd_ChKP, self.RSA_param.QR), dtype=np.complex128)
-            # Создание массива ndop нулей размера QR для хранения индексов
-            #ndop = np.zeros(self.RSA_param.QR, dtype=int)
-            
-            indices = np.arange(self.RSA_param.QR)
-            x = (-self.RSA_param.QR  / 2 + indices) * self.RSA_param.dx
-            rt = np.sqrt(self.RSA_param.R ** 2 + x ** 2)
-            phase = self.RSA_param.LCHM + self.w * rt
-            ndop = ((rt - self.RSA_param.R) // self.RSA_param.dnr).astype(int)
-            Imp0 = np.sin(phase) + 1j * np.cos(phase)
-
-            # Вычисление значений массива ndop и заполнение массивов Imp и U_sl
-            for i in range(self.RSA_param.QR):
-                U_sl = np.zeros((Nd_ChKP,1), dtype=complex)
-                Imp = np.zeros((Nd_ChKP,1), dtype=complex)
-                z = Imp0[:,i].reshape((-1,1))
-                Imp[ndop[i] + Mdop:ndop[i] + Mdop + self.N1] = z
-                qq = i // Nd_x
-                U_sl[ndop[i] + Mdop:ndop[i] + Mdop + self.N1,0] = U_sl0_compl[:, qq]
-                # Заполнение Rgg_ChKP значением Imp * U_sl
-                Rgg_ChKP[:, i] = (Imp * U_sl).ravel()
-
-            Rgg_ChKP *= Chkp_power
-            # Получение размеров Y0 и X0 массива Rgg_ChKP
-            Y0, X0 = Rgg_ChKP.shape
-        
-            Rgg_ChKP2 = np.zeros((self.RSA_param.power_two, X0), dtype=np.complex128)
-            Rgg_ChKP2[ChKP_location_y:Y0 + ChKP_location_y, :] = Rgg_ChKP
-
-            coord_ChKP = (ChKP_location_x, X0)
-
-            return coord_ChKP, Rgg_ChKP2
-
     
     def save_prj_json(self):
         # формирование словаря ЧКП
@@ -638,14 +561,15 @@ class Convolution():
 
 if __name__ == '__main__':
 
-    param_RSA = [10944+64, 165500, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
-    ChKP = [[48000, 3190, 25, 100, 450]]
+    param_RSA = [10944+64, 120000, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
+    ChKP = [[8400, 5000, 25, 100, 450]]
 
 
-    sf = Convolution(param_RSA, "C:/Users/X/Desktop/185900", "1", ChKP_param=ChKP, auto_px_norm='hemming')
+    sf = Convolution(param_RSA, "C:/Users/X/Desktop/source/185900", "1", ChKP_param=ChKP, auto_px_norm='none')
 
-    #sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP(ROI=[44000, 2000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")
+    sf.range_convolution_ChKP()
+    sf.azimuth_convolution_ChKP(ROI=[0, 4000, 120000, 6000])
  
+    # sf.azimuth_convolution_ChKP(ROI=[0, 2000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")
     
    
