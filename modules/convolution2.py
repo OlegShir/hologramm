@@ -316,7 +316,7 @@ class Convolution():
         image.save(f"{self.file_path}/{self.file_name}.png")
 
     def plot_plt(self, RLI):
-        Coef_1_r = 0.25 / (1.6*self.dnr)  # Коэффициент переквантования РГГ по дальности
+        Coef_1_r = 0.25 / (1.4*self.dnr)  # Коэффициент переквантования РГГ по дальности
         Coef_1_x = 0.25 / self.dx  # Коэффициент переквантования РГГ по азимуту
         print(self.dnr, self.dx)
 
@@ -561,14 +561,15 @@ class Convolution():
 
 if __name__ == '__main__':
 
-    param_RSA = [10944+64, 120000, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
-    ChKP = [[8400, 5000, 25, 100, 450]]
+    param_RSA = [10944+64, 30000, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 4180]
+    #ChKP = [[8400, 5000, 25, 100, 450]]
+    ChKP=[]
 
 
     sf = Convolution(param_RSA, "C:/Users/X/Desktop/source/185900", "1", ChKP_param=ChKP, auto_px_norm='none')
 
     sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP(ROI=[0, 4000, 120000, 6000])
+    sf.azimuth_convolution_ChKP(ROI=[0, 2000, 30000, 5000])
  
     # sf.azimuth_convolution_ChKP(ROI=[0, 2000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")
     
