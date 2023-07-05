@@ -8,6 +8,7 @@ import modules.file_manager as fm
 from modules.massager import MSGLabel
 from modules.convolution4 import Convolution
 from modules.image_analizator import ImageAnalizator
+from modules.vertical_label import VerticalLabel
 
 
 
@@ -53,6 +54,7 @@ class MainForm(QtWidgets.QMainWindow):
 
         # загрузка файла интерфейса основного окна
         uic.loadUi('qt_forms/qt_main_new2.ui', self)
+
         # загрузка интерфейса таблицы ЧКП
         self.table_Chkp = ChkpTable(self.tabWidget.widget(0))  
         # загрузка интерфейса левого окна
@@ -61,8 +63,15 @@ class MainForm(QtWidgets.QMainWindow):
         self.image_analizator = ImageAnalizator(self)
         # загрузка мессенджер
         self.msg = MSGLabel(self)
+        # заголовок масштаба по оси х
+        self.label_meters_x.setHidden(True)
+        # заголовок масштаба по оси у
+        self.label_meters_y = VerticalLabel('34343 м.')
+        # Создание макета и добавление вашего виджета в него
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.label_meters_y)
         # явно передаем в левый вивер таблицу ЧКП и мессенджер
-        self.image_view.set_link(self.table_Chkp, self.msg)
+        self.image_view.set_link(self.table_Chkp, self.msg, self.label_meters_x)
         # явно передаем таблицу ЧПК в левый вивер и мессенджер
         self.table_Chkp.set_link(self.image_view, self.msg)
 
