@@ -13,10 +13,7 @@ class ImageView(QGraphicsView):
         self.setEnabled(False)
         # Create a scene for displaying images
         self.graphics_scene = QGraphicsScene(self)
-        #  поле для хранения ссылки на метку текста масштаба
-        self.scale_label: QLabel 
-        self.create_scale_label()
-        
+
         self.setScene(self.graphics_scene)
         self.setGeometry(5, 30, 516, 350)
         
@@ -52,7 +49,11 @@ class ImageView(QGraphicsView):
         self.coef_px_to_count: list
         self.coef_px_to_meters: list
 
-    def set_link(self, table, msg):
+        self.label_x: QLabel
+
+    def set_link(self, table, msg, label_x):
+        self.label_x = label_x
+        #self.label_y = label_y
         self.table = table
         self.msg = msg
     
@@ -89,8 +90,7 @@ class ImageView(QGraphicsView):
                 label.setPos(new_pos)
         
         self.update_scale_label_text()
-        
-       
+     
 
     def mousePressEvent(self, event):
         # Handle mouse press event for moving the image
@@ -175,9 +175,9 @@ class ImageView(QGraphicsView):
 
         self.setEnabled(True)
 
+        self.label_x.setHidden(False)
 
         # отображение метки масштаба
-        self.scale_label.show()  # Покажите метку текста после открытия файла
         self.update_scale_label_text()
         
 
@@ -200,27 +200,13 @@ class ImageView(QGraphicsView):
         self.coef_px_to_count = coef_px_to_count
         self.coef_px_to_meters = coef_px_to_meters
 
-    def create_scale_label(self):
-        # Добавление метки текста для отображения масштаба
-        self.scale_label = QLabel(self)
-        self.scale_label.setText("1111")
-        self.scale_label.setFont(QFont("Arial", 12))
-        self.scale_label.setStyleSheet("color: red")  # Установите красный цвет текста
-
 
     def update_scale_label_text(self):
         _, _, wight_px, height_px = self.get_visible_pixels()
         meters_x = round(wight_px * self.coef_px_to_meters[0])
-        self.scale_label.setText('{meters_x} м.')
-        print(meters_x)
-        # Расчет размера метки текста в пикселях
-        scale_label_position_x = (self.size().width() - self.scale_label.sizeHint().width()) / 2
-        scale_label_position_y = self.size().height() - self.scale_label.sizeHint().height()
-        # позиция метки текста
-        self.scale_label.move(round(scale_label_position_x), scale_label_position_y)
+        meters_y = round(height_px * self.coef_px_to_meters[1])
+        self.label_x.setText(f'{meters_x} м.')
 
-        # Помещение метки на верхний слой
-        self.scale_label.raise_()
 
 
             

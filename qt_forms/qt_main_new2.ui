@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1065</width>
-    <height>710</height>
+    <height>732</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,7 +22,7 @@
     <property name="geometry">
      <rect>
       <x>21</x>
-      <y>400</y>
+      <y>420</y>
       <width>170</width>
       <height>30</height>
      </rect>
@@ -86,7 +86,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>555</y>
+      <y>575</y>
       <width>170</width>
       <height>30</height>
      </rect>
@@ -99,7 +99,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>440</y>
+      <y>460</y>
       <width>171</width>
       <height>101</height>
      </rect>
@@ -147,7 +147,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>600</y>
+      <y>620</y>
       <width>170</width>
       <height>30</height>
      </rect>
@@ -163,7 +163,7 @@
     <property name="geometry">
      <rect>
       <x>526</x>
-      <y>390</y>
+      <y>410</y>
       <width>535</width>
       <height>291</height>
      </rect>
@@ -511,6 +511,34 @@
       </property>
      </widget>
     </widget>
+   </widget>
+   <widget class="QLabel" name="label_meters_x">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>208</x>
+      <y>390</y>
+      <width>80</width>
+      <height>13</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="layoutDirection">
+     <enum>Qt::LeftToRight</enum>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
