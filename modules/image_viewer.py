@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsTextItem, QLabel
 from PyQt5.QtCore import Qt, QPoint, QPointF
-from PyQt5.QtGui import QPainter, QPixmap
+from PyQt5.QtGui import QPainter, QPixmap, QFont
 from modules.ChKP_table import ChkpTable
 from modules.massager import MSGLabel
 from PyQt5.QtCore import QPropertyAnimation, QPoint
@@ -13,8 +13,13 @@ class ImageView(QGraphicsView):
         self.setEnabled(False)
         # Create a scene for displaying images
         self.graphics_scene = QGraphicsScene(self)
+        #  поле для хранения ссылки на метку текста масштаба
+        self.scale_label: QLabel 
+        self.create_scale_label()
+        
         self.setScene(self.graphics_scene)
         self.setGeometry(5, 30, 516, 350)
+        
         # ограничители масштабирования
         self.min_ratio: float
         self.max_ratio: float
@@ -31,7 +36,7 @@ class ImageView(QGraphicsView):
         self.Chkp_pixmap = QPixmap("icon.png")
         self.xsize_Chkp_pixmap:int = self.Chkp_pixmap.width()
         self.ysize_Chkp_pixmap: int = self.Chkp_pixmap.height()
-
+        
         # инициализация масштаба
         self.scale_factor: float = 1.0
         # инициализация позиция мыши и размера 
@@ -42,6 +47,10 @@ class ImageView(QGraphicsView):
         self.setRenderHint(QPainter.Antialiasing)
         self.setRenderHint(QPainter.SmoothPixmapTransform)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+        # резервирование места для коэффициентов перерасчета 
+        self.coef_px_to_count: list
+        self.coef_px_to_meters: list
 
     def set_link(self, table, msg):
         self.table = table
@@ -78,6 +87,8 @@ class ImageView(QGraphicsView):
                 new_pos = label_pos + QPointF((old_size - new_size) / 2, (old_size - new_size) / 2)
                 # Установка новой позиции метки
                 label.setPos(new_pos)
+        
+        self.update_scale_label_text()
         
        
 
@@ -153,12 +164,7 @@ class ImageView(QGraphicsView):
         yratio = self.size().height()/ image.size().height()
 
         return min(xratio, yratio), max(1/xratio, 1/yratio)
-        
-    
-    def create_scene(self):
-        # Create the scene and return it
-        return self.graphics_scene
-
+   
     def open_file(self, path_to_img):
         # Загрузка изображения с помощью QPixmap
         image = QPixmap(path_to_img)
@@ -168,6 +174,13 @@ class ImageView(QGraphicsView):
         self.min_ratio, self.max_ratio = self.get_limit_ratio(image)
 
         self.setEnabled(True)
+
+
+        # отображение метки масштаба
+        self.scale_label.show()  # Покажите метку текста после открытия файла
+        self.update_scale_label_text()
+        
+
 
     def get_visible_pixels(self):
         """получение размеров изображения в пикселях и 
@@ -181,5 +194,35 @@ class ImageView(QGraphicsView):
         # формирование области
         ROI_px = [rect.left(), rect.top(), rect.right()-rect.left(), rect.bottom()-rect.top()]
 
-        return [self.ysize_RLI_pixmap, self.xsize_RLI_pixmap], ROI_px
+        return ROI_px
+    
+    def set_scale_factor_px_count_and_meters(self, coef_px_to_count, coef_px_to_meters) -> None:
+        self.coef_px_to_count = coef_px_to_count
+        self.coef_px_to_meters = coef_px_to_meters
 
+    def create_scale_label(self):
+        # Добавление метки текста для отображения масштаба
+        self.scale_label = QLabel(self)
+        self.scale_label.setText("1111")
+        self.scale_label.setFont(QFont("Arial", 12))
+        self.scale_label.setStyleSheet("color: red")  # Установите красный цвет текста
+
+
+    def update_scale_label_text(self):
+        _, _, wight_px, height_px = self.get_visible_pixels()
+        meters_x = round(wight_px * self.coef_px_to_meters[0])
+        self.scale_label.setText('{meters_x} м.')
+        print(meters_x)
+        # Расчет размера метки текста в пикселях
+        scale_label_position_x = (self.size().width() - self.scale_label.sizeHint().width()) / 2
+        scale_label_position_y = self.size().height() - self.scale_label.sizeHint().height()
+        # позиция метки текста
+        self.scale_label.move(round(scale_label_position_x), scale_label_position_y)
+
+        # Помещение метки на верхний слой
+        self.scale_label.raise_()
+
+
+            
+        
+       

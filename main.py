@@ -6,7 +6,7 @@ from modules.ChKP_table import ChkpTable
 from modules.base_RSA import Adapter
 import modules.file_manager as fm
 from modules.massager import MSGLabel
-from modules.convolution2 import Convolution
+from modules.convolution4 import Convolution
 from modules.image_analizator import ImageAnalizator
 
 
@@ -113,27 +113,32 @@ class MainForm(QtWidgets.QMainWindow):
     def opening_file(self) -> None:
         """Метод загрузки файла голограммы (*.rgg) или изображения(*.jpg)."""
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Выберите голограмму или РЛ-изображение", "", "PCA (*.rgg *.jpg)")
+            self, "Выберите голограмму или РЛ-изображение", "", "PCA (*.rgg *.jpg *.png)")
         # если фаил выбран
         if file_path:
             self.file_path_prj, self.file_name, file_type = fm.get_file_parameters(file_path)
-            if file_type == 'jpg' or file_type == 'JPG':
+            if file_type == 'jpg' or file_type == 'png':
                 # проверяем существование голограммы и файла параметров РСА
                 if not os.path.exists(f'{self.file_path_prj}/{self.file_name}.rgg') \
                    or not os.path.exists(f'{self.file_path_prj}/{self.file_name}.json'):
                     self.msg.set_text(
                         'Отсутствуют файл голограммы или параметров РСА\nОткройте фаил голограммы')
                     return
-                # установка в "выбор типа РСА" тип РСА из файла RSA.json
-                self.type_RSA_img = fm.project_json_reader(f'{self.file_path_prj}/{self.file_name}.json', 'РСА')
+                # считываем json фаил проекта и получем название РСА
+                self.type_RSA_img = fm.project_json_reader(f'{self.file_path_prj}/{self.file_name}.json', "RSA")
                 # если РСА есть в списке
                 if self.type_RSA_img in self.list_RSA:
-                    # выставляем его в поле
+                    # выставляем его в поле "выбор типа РСА"
                     self.change_RSA.setCurrentText(self.type_RSA_img)
+                    # Далее получаем параметры РСА из json фаил проекта 
+                    self.param_RSA = fm.project_json_reader(f'{self.file_path_prj}/{self.file_name}.json', '')
                 # активация кнопки "создать САП", "сохранение РЛ-изображения"
                 else: 
                     self.msg.set_text("Изображение сформировано РСА, не входящим в программу")
                     return
+                # для правильного расчета метки масштаба в image_view необходимо передать значения коэффициентов пикселей в отсчеты и пикселей в метры, получаемые из dx, ndr и коэффициента сжатия изображение, получаемых из параметров РСА
+                coef_px_to_count, coef_px_to_meters = self.scale_factor_px_count_and_meters(self.param_RSA)
+                self.image_view.set_scale_factor_px_count_and_meters(coef_px_to_count, coef_px_to_meters)
                 self.image_view.open_file(file_path)
                 self.activate_gui(self.create_SAP, self.save_img_RSA)
             elif file_type == 'rgg':
@@ -233,6 +238,20 @@ class MainForm(QtWidgets.QMainWindow):
         print("ChKP_count", ChKP_count)
 
         return ChKP_count, ROI_count
+    
+    def scale_factor_px_count_and_meters(self, param_RSA: list):
+
+        _, _, fcvant, _, Tpi, _, _, movement_speed, _, _, coef_resize= param_RSA
+        
+        dnr:float = 3e8 / (2 * fcvant) # шаг по дальности
+        dx:float = movement_speed  * Tpi # Шаг по азимуту
+
+        coef_px_to_count_y = dnr/(0.25*coef_resize)
+        coef_px_to_count_x = dx/(0.25*coef_resize)
+        coef_px_to_meters_y = coef_px_to_count_x * dnr
+        coef_px_to_meters_x = coef_px_to_count_y * dx
+
+        return [coef_px_to_count_x, coef_px_to_count_y], [coef_px_to_meters_x, coef_px_to_meters_y]
 
 
 if __name__ == "__main__":
