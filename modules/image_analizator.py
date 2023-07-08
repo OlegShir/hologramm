@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
-from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QPainter, QPixmap
+from PyQt5.QtCore import Qt, QPoint, QPropertyAnimation
+from PyQt5.QtGui import QPainter, QPixmap, QImage
 from modules.ChKP_table import ChkpTable
 from modules.massager import MSGLabel
-from PyQt5.QtCore import QPropertyAnimation, QPoint
+from PIL import Image, ImageEnhance
+import numpy as np
+
 
 
 class ImageAnalizator(QGraphicsView):
@@ -14,7 +16,7 @@ class ImageAnalizator(QGraphicsView):
         # Create a scene for displaying images
         self.graphics_scene = QGraphicsScene(self)
         self.setScene(self.graphics_scene)
-        self.setGeometry(527, 30, 516, 350)
+        self.setGeometry(565, 30, 516, 350)
         # ограничители масштабирования
         self.min_ratio: float
         self.max_ratio: float
@@ -107,13 +109,31 @@ class ImageAnalizator(QGraphicsView):
         
 
     def open_file(self, path_to_img):
-        # Загрузка изображения с помощью QPixmap
-        image = QPixmap(path_to_img)
+        self.image_init = Image.open(path_to_img)
+        # Преобразование изображения в режим "L" (градации серого)
+        self.image_init = self.image_init.convert("L")
+        self.image_init_weight, self.image_init_height = self.image_init.size
+
+        self.update_display_image()
+        
+        self.setEnabled(True)
+
+    def update_display_image(self):
+         # Преобразование изображения PIL в QImage
+    
+
+        image_qt = QImage(self.image_init.tobytes(), self.image_init_weight, self.image_init_height, QImage.Format_Grayscale8)
+        # Создание QPixmap из QImage
+        image = QPixmap.fromImage(image_qt)
         # Установка изображения в ImageView
         self.pixmap_item.setPixmap(image)
+        
+    def change_bright(self, value):
 
-        self.min_ratio, self.max_ratio = self.get_limit_ratio(image)
+        enhancer = ImageEnhance.Brightness(self.image_init)
+        enhanced_image = enhancer.enhance(value)
+        self.image_init = enhanced_image
+        self.update_display_image()
 
-        self.setEnabled(True)
 
 
