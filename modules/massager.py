@@ -13,7 +13,7 @@ class MSGLabel(QLabel):
         self.current_duration = 0
         self.timer.timeout.connect(self.hideText)
         
-        self.color_codes = {
+        self.color_codes:dict = {
                             "b": "black",
                             "r": "red",
                             "y": "yellow",

@@ -20,8 +20,8 @@
 import numpy as np
 from progress.bar import IncrementalBar
 from PIL import Image, ImageOps
-from modules.file_manager import project_json_writer
-from modules.ChKP_builder import ChKPBuider
+from file_manager import project_json_writer
+from ChKP_builder import ChKPBuider
 import time
 from halo import Halo
 
@@ -33,7 +33,6 @@ class Convolution():
                  file_name: str, # название файла РГГ (опционально)
                  full_RGG:bool = True, # тип обработки - если True, то обрабатывается вся РРГ, иначе только ЧКП
                  ChKP_param: list =[int] , # список параметров ЧКП вида []
-                 auto_px_norm: str = 'auto', # режим нормализации пикселей РЛИ
                  file_path_project: str = '',
                  ) -> None:
         print("Инициализация данных")
@@ -41,10 +40,9 @@ class Convolution():
         self.full_RGG = full_RGG
         self.file_path:str = file_path # путь до файла РГГ
         self.file_name:str = file_name # название файла РГГ (опционально)  # получение пути для сохранения
-        self.auto_px_norm = auto_px_norm
         self.file_path_project = file_path_project
         # для ЧПК они повторяются 
-        self.N_otst = 0 # количество импульсов пропускаемых при чтении РГГ
+        self.N_otst = 60000 # количество импульсов пропускаемых при чтении РГГ
         # self.Na = 90000
         # распаковка параметров РСА
         self.get_init_param_RSA(RSA_param)
@@ -268,14 +266,14 @@ class Convolution():
         with Halo(text='Формирование РЛИ                  ', spinner="dots2",  placement='right', color="white", ):
         
             # Вычисление амплитуды (модуля) 
-            amplitude_values = np.power(np.abs(RLI), 0.3)
+            amplitude_values = np.power(np.abs(RLI), 1)
             # Линейная нормализация значений         
             normalized_values = (amplitude_values - np.min(amplitude_values)) / (np.max(amplitude_values) - np.min(amplitude_values))
             # Преобразование в диапазон от 0 до 255
             scaled_data = (normalized_values * 255).astype(np.uint8)
 
             # Создание объекта изображения с градациями серого
-            image = Image.fromarray(scaled_data, mode='L')
+            image = Image.fromarray(scaled_data * 10, mode='L')
 
             # Масштабирование изображение в соответствии с параметрами dnr и dx
             factor_r = 0.25 / self.dnr  # Коэффициент переквантования РГГ по дальности
@@ -289,15 +287,15 @@ class Convolution():
 if __name__ == '__main__':
 
 
-    param_RSA = [10944+64, 165562, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 2250, 0.1]
+    param_RSA = [10944+64, 20000, 400e6, 0.0351, 485.692e-6, 300e6, 10e-6, 108, 0.23, 2250, 0.1]
     #ChKP = [[8400, 5000, 25, 100, 450]]
     ChKP=[]
 
 
-    sf = Convolution(param_RSA, "F:/RGG source/185900", "1", ChKP_param=ChKP, auto_px_norm='none')
+    sf = Convolution(param_RSA, "F:/RGG source/185900", "1", ChKP_param=ChKP)
 
     sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP()
+    sf.azimuth_convolution_ChKP(ROI=[0, 5000, 20000, 2000])
 
     # sf.azimuth_convolution_ChKP(ROI=[0, 2000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")
     

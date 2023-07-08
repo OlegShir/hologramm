@@ -11,7 +11,7 @@ class ImageApp(QMainWindow):
         self.setWindowTitle("Image Viewer")
         
         # Загрузка изображения
-        self.image = cv2.imread("modules/1.png", cv2.IMREAD_GRAYSCALE)
+        self.image = cv2.imread('F:/RGG source/185900/1_ROI.png', cv2.IMREAD_GRAYSCALE)
         self.display_image = self.scale_image(self.image)
         
         # Создание виджетов

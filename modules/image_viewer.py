@@ -50,10 +50,11 @@ class ImageView(QGraphicsView):
         self.coef_px_to_meters: list
 
         self.label_x: QLabel
+        self.label_y: QLabel
 
-    def set_link(self, table, msg, label_x):
+    def set_link(self, table, msg, label_x, label_y):
         self.label_x = label_x
-        #self.label_y = label_y
+        self.label_y = label_y
         self.table = table
         self.msg = msg
     
@@ -163,7 +164,7 @@ class ImageView(QGraphicsView):
         xratio = self.size().width() / image.size().width() 
         yratio = self.size().height()/ image.size().height()
 
-        return min(xratio, yratio), max(1/xratio, 1/yratio)
+        return max(xratio, yratio), min(1/xratio, 1/yratio)
    
     def open_file(self, path_to_img):
         # Загрузка изображения с помощью QPixmap
@@ -176,6 +177,7 @@ class ImageView(QGraphicsView):
         self.setEnabled(True)
 
         self.label_x.setHidden(False)
+        self.label_y.setHidden(False)
 
         # отображение метки масштаба
         self.update_scale_label_text()
@@ -196,16 +198,29 @@ class ImageView(QGraphicsView):
 
         return ROI_px
     
-    def set_scale_factor_px_count_and_meters(self, coef_px_to_count, coef_px_to_meters) -> None:
+    def get_ROI_in_count(self) -> list:
+        x0_px, y0_px, wight_px, height_px = self.get_visible_pixels()
+
+        ROI_in_count = [x0_px*self.coef_px_to_count[0],
+                        y0_px*self.coef_px_to_count[1],
+                        wight_px*self.coef_px_to_count[0],
+                        height_px*self.coef_px_to_count[1]]
+        
+        ROI_in_count = [round(x) for x in ROI_in_count]
+
+        return ROI_in_count
+
+    
+    def set_scale_factor_px_to_count_and_meters(self, coef_px_to_count, coef_px_to_meters) -> None:
         self.coef_px_to_count = coef_px_to_count
         self.coef_px_to_meters = coef_px_to_meters
-
 
     def update_scale_label_text(self):
         _, _, wight_px, height_px = self.get_visible_pixels()
         meters_x = round(wight_px * self.coef_px_to_meters[0])
         meters_y = round(height_px * self.coef_px_to_meters[1])
         self.label_x.setText(f'{meters_x} м.')
+        self.label_y.setText(f'{meters_y} м.')
 
 
 
