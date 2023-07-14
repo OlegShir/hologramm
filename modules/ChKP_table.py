@@ -21,9 +21,9 @@ class ChkpTable(QTableWidget):
 
     def activate_table(self) -> None:
         # Создание заголовков таблицы
-        self.setColumnCount(7)
+        self.setColumnCount(5)
         self.setHorizontalHeaderLabels(
-            ["Положение X", "Положение  Y", "Вынос X", "Вынос Y", "Интенсивность", "Размер X", "Размер Y"])
+            ["Положение X", "Положение  Y", "Интенсивность", "Размер X (м.)", "Размер Y (м.)"])
         self.resizeColumnsToContents()
 
     def add_element(self) -> None:
@@ -91,30 +91,29 @@ class ChkpTable(QTableWidget):
                 self.msg.set_text(f'Введен некорректный формат данных', color = 'r')
                 
     def data_collector(self):
+        data_ChKps = []
         if self.rowCount() != -1:
-            data_ChKps = []
             for row in range(self.rowCount()):
                 data_ChKp = []
                 # тут путаница со столбцами
                 for column in range(self.columnCount()):
                     item = self.item(row, column)
                     if item is None or not item.text():
-                        self.msg.set_text(f'Введены не все данные в стоке {row+1}')
-                        return
-                    if column == 4:
+                        self.msg.set_text(f'Введены не все данные для ЧКП №{row+1}')
+                        return False
+                    # тут производится пересчет положения ЧКП из пикселей в отсчеты
+                    if column == 0:
+                        value = round(int(item.text())*self.image_viewer.coef_px_to_count[0])
+                    elif column == 1:
+                        value = round(int(item.text())*self.image_viewer.coef_px_to_count[1])
+                    elif column == 2:
                         value = float(item.text())
                     else:
                         value = int(item.text())
-                    if column == 2:
-                        data_ChKp[0] += value
-                        continue
-                    if column == 3:
-                        data_ChKp[1] += value
-                        continue
                     data_ChKp.append(value)
                 data_ChKps.append(data_ChKp)
 
-            return data_ChKps
+        return data_ChKps
     
     def set_link(self, image_viewer, msg):
         self.image_viewer = image_viewer

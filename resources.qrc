@@ -1,0 +1,11 @@
+<RCC>
+  <qresource prefix="btn">
+    <file>qt_forms/resources/ruler.png</file>
+    <file>qt_forms/resources/ampl_line.png</file>
+    <file>qt_forms/resources/ampl_rect.png</file>
+  </qresource>
+   <qresource prefix="ico">
+    <file>qt_forms/resources/RSA.png</file>
+  </qresource>
+</RCC>
+

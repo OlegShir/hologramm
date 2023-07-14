@@ -1,5 +1,7 @@
-<!DOCTYPE RCC><RCC version="1.0">
-<qresource>
+<RCC>
+  <qresource>
+    <file>resources/ruler.png</file>
     <file>resources/add_RCA.png</file>
-</qresource>
+    <file>resources/icon.png</file>
+  </qresource>
 </RCC>

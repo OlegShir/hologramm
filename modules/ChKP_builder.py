@@ -13,6 +13,7 @@ class ChKPBuider():
          
             parent: ссылка на родительский класс
             """
+            self.start_time = time.time()
             self.ChKPs_param = ChKPs_param
             # инициализация переменных родительского класса
             self.RSA_param = parent
@@ -29,7 +30,7 @@ class ChKPBuider():
                 self.RSA_param.coord_ChKP.append(coord_ChKP)
                 self.RSA_param.RGG_ChKP.append(RGG_ChKP)
                 
-                print(f'Сформирована {i+1}-я ЧКП, время: {np.round(time.time()-self.RSA_param.start_time, 2)} c.')
+                print(f'Сформирована {i+1}-я ЧКП, время: {np.round(time.time()-self.start_time, 2)} c.')
    
         def get_ChKP_RGG(self, ChKP_param):
             """Метод производит синтезировать РГГ ЧКП"""           
@@ -89,10 +90,14 @@ class ChKPBuider():
             Rgg_ChKP *= Chkp_power
             # Получение размеров Y0 и X0 массива Rgg_ChKP
             Y0, X0 = Rgg_ChKP.shape
-        
+                    
             Rgg_ChKP2 = np.zeros((self.RSA_param.power_two, X0), dtype=np.complex128)
-            Rgg_ChKP2[ChKP_location_y:Y0 + ChKP_location_y, :] = Rgg_ChKP
+            # Rgg_ChKP2[ChKP_location_y:Y0 + ChKP_location_y, :] = Rgg_ChKP
+            start_index = max(0, ChKP_location_y - Y0//2)
+            end_index = min(start_index + Y0, self.RSA_param.power_two)
+
+            Rgg_ChKP2[start_index:end_index, :] = Rgg_ChKP[:end_index-start_index, :]
+
 
             coord_ChKP = (ChKP_location_x, X0)
-
             return coord_ChKP, Rgg_ChKP2

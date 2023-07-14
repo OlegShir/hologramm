@@ -6,14 +6,14 @@ class MSGLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setGeometry(20,660,500,16)
+        self.setGeometry(20,670,600,16)
 
         # Установка настроек таймера
         self.timer = QTimer()
         self.current_duration = 0
         self.timer.timeout.connect(self.hideText)
         
-        self.color_codes = {
+        self.color_codes:dict = {
                             "b": "black",
                             "r": "red",
                             "y": "yellow",
