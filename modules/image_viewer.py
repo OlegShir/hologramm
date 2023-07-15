@@ -20,9 +20,6 @@ class ImageView(QGraphicsView):
         # ограничители масштабирования
         self.min_ratio: float
         self.max_ratio: float
-        # размер изображения в px
-        self.xsize_RLI_pixmap: int
-        self.ysize_RLI_pixmap: int
         # инициализация ссылки на таблицу с ЧКП
         self.table: ChkpTable
         # инициализация ссылки на мессенджер
@@ -30,7 +27,7 @@ class ImageView(QGraphicsView):
         # инициализация работы с метками ЧКП
         self.pixmap_item = QGraphicsPixmapItem()
         self.graphics_scene.addItem(self.pixmap_item)
-        self.Chkp_pixmap = QPixmap("icon.png")
+        self.Chkp_pixmap = QPixmap("qt_forms/resources/icon.png")
         self.xsize_Chkp_pixmap:int = self.Chkp_pixmap.width()
         self.ysize_Chkp_pixmap: int = self.Chkp_pixmap.height()
         
@@ -91,6 +88,8 @@ class ImageView(QGraphicsView):
                 label.setPos(new_pos)
         
         self.update_scale_label_text()
+
+
      
 
     def mousePressEvent(self, event):
@@ -158,13 +157,14 @@ class ImageView(QGraphicsView):
         super(ImageView, self).mouseReleaseEvent(event)
 
     def get_limit_ratio(self, image) -> tuple:
-        # Получение размера изображения
-        self.xsize_RLI_pixmap = image.size().width()
-        self.ysize_RLI_pixmap = image.size().height()
-        xratio = self.size().width() / image.size().width() 
-        yratio = self.size().height()/ image.size().height()
+        # Определение видимой области в пикселях
+        vertical = self.verticalScrollBar().width()
+        horizontal = self.horizontalScrollBar().height()
 
-        return max(xratio, yratio), min(1/xratio, 1/yratio)
+        x_ratio = (self.size().width()-vertical) / image.size().width() 
+        y_ratio = (self.size().height()-horizontal)/ image.size().height()
+
+        return max(x_ratio, y_ratio), min(1/x_ratio, 1/y_ratio)
    
     def open_file(self, path_to_img):
         # Загрузка изображения с помощью QPixmap

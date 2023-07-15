@@ -183,8 +183,12 @@ class ImageAnalizator(QGraphicsView):
 
     def get_limit_ratio(self) -> tuple:
 
-        x_ratio = self.size().width() / self.image_width
-        y_ratio = self.size().height()/ self.image_height
+        vertical = self.verticalScrollBar().width()
+        horizontal = self.horizontalScrollBar().height()
+
+        x_ratio = (self.size().width()-vertical) / self.image_width
+        y_ratio = (self.size().height()-horizontal)/ self.image_height
+
 
         return max(x_ratio, y_ratio), min(1/x_ratio, 1/y_ratio)
    
@@ -265,6 +269,9 @@ class ImageAnalizator(QGraphicsView):
         # self.graphics_scene.removeItem(self.line_item)
         # self.graphics_scene.removeItem(self.distance_text_item)
         self.ruler = False
+        # Включаем передвижение для картинки и возвращаем курсор
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setCursor(Qt.OpenHandCursor) # type: ignore
 
     def calculate_distance(self, point1: QPoint, point2: QPoint) -> float:
         return math.sqrt((point2.x() - point1.x())**2 + (point2.y() - point1.y())**2)*self.coef_px_to_meters

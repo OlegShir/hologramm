@@ -50,8 +50,8 @@ class MainForm(QtWidgets.QMainWindow):
         # явно передаем таблицу ЧПК в левый вивер и мессенджер
         self.table_Chkp.set_link(self.image_view, self.msg)
 
-        self.image_analizator.set_coef_px_to_meters([0.26,0.26])
-        self.image_analizator.open_file('example/example_ROI.png')
+        # self.image_analizator.set_coef_px_to_meters([0.26,0.26])
+        # self.image_analizator.open_file('example/example_ROI.png')
         
         # Создание виджетов ползунков
         layout_slt = QtWidgets.QVBoxLayout(self.tabWidget.widget(1))
@@ -76,7 +76,7 @@ class MainForm(QtWidgets.QMainWindow):
         self.open_file.clicked.connect(self.opening_file)
 
         # нажатие вывести РЛ-изображение
-        self.get_RLI.clicked.connect(self.getting_RLI)
+        self.save_full_RLI.clicked.connect(self.getting_RLI)
         # нажатие вывести создать САП
         self.create_SAP.clicked.connect(self.creating_SAP)
         # нажатие добавить элемент САП
@@ -169,7 +169,7 @@ class MainForm(QtWidgets.QMainWindow):
             return           
         
         try:
-            RLI = Convolution(self.param_RSA, self.file_path_prj, self.file_name, ChKP_param=ChKP_params, ROI=ROI)
+            RLI = Convolution(self.RSA_param, self.file_path_prj, self.file_name, self.RSA_name, ChKP_params, ROI=ROI)
             RLI.range_convolution_ChKP()
             RLI.azimuth_convolution_ChKP()
             self.image_analizator.open_file(f'{self.file_path_prj}/{self.file_name}_ROI.png')
@@ -177,21 +177,7 @@ class MainForm(QtWidgets.QMainWindow):
         except Exception as e:
             print(e)
             self.msg.set_text("Количество отсчетов отличается от РСА", color='r')
-        
-
-        if not ChKP_params:
-            return           
-        
-        try:
-            RLI = Convolution(self.param_RSA, self.file_path_prj, self.file_name, "Компакт", ChKP_param=ChKP_params, ROI=ROI)
-            RLI.range_convolution_ChKP()
-            RLI.azimuth_convolution_ChKP()
-            self.image_analizator.open_file(f'{self.file_path_prj}/{self.file_name}_ROI.png')
-            self.activate_gui(self.save_SAP)
-        except Exception as e:
-            print(e)
-            self.msg.set_text("Количество отсчетов отличается от РСА", color='r')
-        
+     
 
     def creating_element_SAP(self) -> None:
         self.activate_gui(self.del_element_SAP, self.save_SAP, self.create_SAP, self.save_param_SAP, self.solve_SAP)

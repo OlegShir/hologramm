@@ -91,7 +91,7 @@
      <string>РЛИ с САП</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="get_RLI">
+   <widget class="QPushButton" name="save_full_RLI">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -136,7 +136,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -218,6 +218,26 @@
        <rect>
         <x>172</x>
         <y>6</y>
+        <width>160</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Удалить элемент САП</string>
+      </property>
+      <property name="icon">
+       <iconset>
+        <normaloff>resources/del_RCA.png</normaloff>resources/del_RCA.png</iconset>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="save_param_SAP">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>345</x>
+        <y>7</y>
         <width>160</width>
         <height>25</height>
        </rect>
@@ -612,34 +632,6 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="QLabel" name="label_meters_y">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>203</y>
-      <width>50</width>
-      <height>13</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <weight>75</weight>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="layoutDirection">
-     <enum>Qt::LeftToRight</enum>
-    </property>
-    <property name="text">
-     <string>1</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-    </property>
-   </widget>
    <widget class="QGraphicsView" name="canvas_SAP_2">
     <property name="geometry">
      <rect>
@@ -802,7 +794,7 @@
   <tabstop>solve_SAP</tabstop>
   <tabstop>canvas_SAP</tabstop>
   <tabstop>save_SAP</tabstop>
-  <tabstop>get_RLI</tabstop>
+  <tabstop>save_full_RLI</tabstop>
  </tabstops>
  <resources>
   <include location="resources.qrc"/>
