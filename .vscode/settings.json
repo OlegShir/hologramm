@@ -12,6 +12,7 @@
         "cmap",
         "Dimp",
         "dtype",
+        "fcvant",
         "fftshift",
         "frombuffer",
         "ifft",

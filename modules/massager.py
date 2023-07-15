@@ -6,7 +6,7 @@ class MSGLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setGeometry(20,660,500,16)
+        self.setGeometry(20,670,600,16)
 
         # Установка настроек таймера
         self.timer = QTimer()

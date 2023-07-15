@@ -23,24 +23,35 @@ class SliderIMG(QWidget):
         self.bt_exp_reset = QPushButton('Сброс')
   
         # Настройка диапазона и начального значения для slider_contrast
-        self.slider_contrast.setMinimum(-50)
-        self.slider_contrast.setMaximum(50)
-        self.slider_contrast.setValue(0)
+        self.slider_contrast.setTickPosition(QSlider.TicksAbove)  # Риски располагаются вверху от слайдера
+        self.slider_contrast.setTickInterval(1)
+        self.slider_contrast.setMinimum(0)
+        self.slider_contrast.setMaximum(20)
+        self.slider_contrast.setValue(10)
 
         # Настройка диапазона и начального значения для slider_bright
+        self.slider_bright.setTickPosition(QSlider.TicksAbove)  # Риски располагаются вверху от слайдера
+        self.slider_bright.setTickInterval(1)
         self.slider_bright.setMinimum(0)
-        self.slider_bright.setMaximum(255)
-        self.slider_bright.setValue(128)
+        self.slider_bright.setMaximum(20)
+        self.slider_bright.setValue(10)
         
-        # Настройка диапазона и начального значения для slider_bright
-        self.slider_exp.setMinimum(-20)
+        # Настройка диапазона и начального значения для slider_exp
+        self.slider_exp.setTickPosition(QSlider.TicksAbove)  # Риски располагаются вверху от слайдера
+        self.slider_exp.setTickInterval(1)
+        self.slider_exp.setMinimum(0)
         self.slider_exp.setMaximum(20)
-        self.slider_exp.setValue(0)
+        self.slider_exp.setValue(10)
 
         # Добавление слота для обработки изменений значения ползунков
-        self.slider_contrast.valueChanged.connect(self.slider_value_changed)
-        self.slider_bright.valueChanged.connect(self.slider_value_changed)
-        self.slider_exp.valueChanged.connect(self.slider_value_changed)
+        self.slider_contrast.valueChanged.connect(self.slider_changed)
+        self.slider_bright.valueChanged.connect(self.slider_changed)
+        self.slider_exp.valueChanged.connect(self.slider_changed)
+
+        # Добавление слота для обработки нажатия кнопки сброса
+        self.bt_contrast_reset.clicked.connect(self.reset_value_contrast)
+        self.bt_bright_reset.clicked.connect(self.reset_value_bright)
+        self.bt_exp_reset.clicked.connect(self.reset_value_exp)
        
         # Добавление QSlider в лайаут
         layout.addWidget(self.slider_contrast_text, 0,0)
@@ -60,14 +71,23 @@ class SliderIMG(QWidget):
         self.image_analizator = image_analizator
 
 
-    def slider_value_changed(self):
-        # Обработка изменения значения яркости
-        contrast_value = self.slider_contrast.value()
-        bright_value = self.slider_bright.value()
-        print("Новое значение ползунков: contrast =", contrast_value, "bright =", bright_value)
+    def slider_changed(self):
+        self.image_analizator.adjust_image(self.slider_contrast.value()/10, 
+                                           self.slider_bright.value()/10, 
+                                           self.slider_exp.value()/10)
 
-    def reset_value_button(self):
-        pass
+    def reset_value_contrast(self):
+         # Обработка нажатия кнопки сброса
+        self.slider_contrast.setValue(10)  # Вернуть значение контраста к исходному
+        self.slider_changed()
+
+    def reset_value_bright(self):        
+        self.slider_bright.setValue(10)  # Вернуть значение яркости к исходному
+        self.slider_changed()
+
+    def reset_value_exp(self):
+        self.slider_exp.setValue(10)  # Вернуть значение экспозиции к исходному
+        self.slider_changed()
 
 
 

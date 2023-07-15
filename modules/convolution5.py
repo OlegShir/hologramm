@@ -4,7 +4,7 @@
         - параметры РСА:
                         [количество комплексных отсчетов, количество зарегистрированных импульсов, частота дискретизации АЦП, длина волны,...
                         период повторения импульсов, ширина спектра сигнала, длительность импульса, скорость движения носителя,...
-                        размер антенны по азимуту,наклонная дальность (до объекта прикрытия)]
+                        размер антенны по азимуту, минимальная наклонная дальность (до объекта прикрытия), коэффициент сжатия]
         - путь до файла *.rgg
         - название файла с которым будет производится сохранение
         - тип обработки
@@ -22,8 +22,8 @@ from progress.bar import IncrementalBar
 from PIL import Image, ImageOps
 from modules.file_manager import project_json_writer
 from modules.ChKP_builder import ChKPBuider
-import time
 from halo import Halo
+from os import remove
 
 
 class Convolution():
@@ -31,7 +31,7 @@ class Convolution():
                  RSA_param:list, #
                  file_path: str, # путь до файла РГГ
                  file_name: str, # название файла РГГ (опционально)
-                 full_RGG:bool = True, # тип обработки - если True, то обрабатывается вся РРГ, иначе только ЧКП
+                 RSA_name:str, # название РСА
                  ChKP_param: list =[int] , # список параметров ЧКП вида []
                  file_path_project: str = '',
                  ROI:list = [], # область РГГ, которая будет сворачиваться по азимуту в РЛИ
@@ -39,7 +39,7 @@ class Convolution():
                  ) -> None:
         print("Инициализация данных")
         self.ChKP_param = ChKP_param     
-        self.full_RGG = full_RGG
+        self.RSA_name = RSA_name
         self.file_path:str = file_path # путь до файла РГГ
         self.file_name:str = file_name # название файла РГГ (опционально)  # получение пути для сохранения
         self.file_path_project = file_path_project
@@ -124,17 +124,15 @@ class Convolution():
         self.coef_resize:float = coef_resize # коэффициент сжатия РГГ при формировании изображения
 
     def get_path_output_rpt(self) -> str:
-        if self.full_RGG:
-            # создание имени файла в зависимости от необходимой свертки
-            if self.impactChPK:
-                # фаил с результатами свертки по дальности суммарной РГГ (РГГ + ЧКП)
-                output_file_path = f"{self.file_path}/{self.file_name}_with_{len(self.ChKP_param)}ChKP.rpt"
-            else:
-                # фаил с результатами свертки по дальности только исходной РГГ 
-                output_file_path = f"{self.file_path}/{self.file_name}.rpt"
+
+        # создание имени файла в зависимости от необходимой свертки
+        if self.impactChPK:
+            # фаил с результатами свертки по дальности суммарной РГГ (РГГ + ЧКП)
+            output_file_path = f"{self.file_path}/{self.file_name}_with_{len(self.ChKP_param)}ChKP.rpt"
         else:
-            # фаил с результатами свертки по дальности только ЧКП
-            output_file_path = f"{self.file_path}/{self.file_name}_only_ChKP.rpt"
+            # фаил с результатами свертки по дальности только исходной РГГ 
+            output_file_path = f"{self.file_path}/{self.file_name}.rpt"
+
         
         return output_file_path
     
@@ -157,34 +155,34 @@ class Convolution():
             # установка начала считывания голограммы
             rgg_file.seek(2*self.Ndn*self.N_otst_r, 0)          
             
-            if self.full_RGG:
-                for i in IncrementalBar("Свертка исходной РГГ по дальности", suffix = self.suffix).iter(range(self.Na)):
-                    # значение считываются в диапазоне от -127 до +128
-                    st = np.fromfile(rgg_file, dtype=np.int8, count=self.Ndn*2) 
-                    # заполнение первых 128 значений нулем
-                    st[:128] = 0                    
-                    # Преобразование удвоенного количества отсчетов в столбец комплексных чисел
-                    stc = st[::2] + 1j * st[1::2]
-                    # добавление нулей в конец массива 
-                    stc = np.concatenate((stc, np.zeros(self.power_two - len(stc), dtype=self.accuracy)))  # Добавление нулевых элементов
 
-                    if self.impactChPK:
-                        # если установлена ЧКП
-                        for j in range(len(self.RGG_ChKP)):
-                            if self.coord_ChKP[j][0]-self.coord_ChKP[j][1]/2< i+self.N_otst_r+1<= self.coord_ChKP[j][0]+self.coord_ChKP[j][1]/2:
-                                # добавление в столбцы исходной РГГ столбцов РГГ ЧКП 
-                                stc += self.RGG_ChKP[j][:, self.ChKP_column_count[j]]
-                                self.ChKP_column_count[j] += 1
-                                        
-                    fft_stc = np.fft.fft(stc)
-                    # создание свертки комплексного столбца и опорной функции
-                    svRG = fft_stc*sp_OF
-                    svRG = np.fft.ifft(svRG)
-                    # создание фрейма для записи
-                    write_frame = np.zeros(2*self.power_two)
-                    write_frame[0:self.power_two] = svRG.real
-                    write_frame[self.power_two:2*self.power_two] = svRG.imag
-                    write_frame.astype(np.float32).tofile(rpg_file)  # Запись в файл
+            for i in IncrementalBar("Свертка исходной РГГ по дальности", suffix = self.suffix).iter(range(self.Na)):
+                # значение считываются в диапазоне от -127 до +128
+                st = np.fromfile(rgg_file, dtype=np.int8, count=self.Ndn*2) 
+                # заполнение первых 128 значений нулем
+                st[:128] = 0                    
+                # Преобразование удвоенного количества отсчетов в столбец комплексных чисел
+                stc = st[::2] + 1j * st[1::2]
+                # добавление нулей в конец массива 
+                stc = np.concatenate((stc, np.zeros(self.power_two - len(stc), dtype=self.accuracy)))  # Добавление нулевых элементов
+
+                if self.impactChPK:
+                    # если установлена ЧКП
+                    for j in range(len(self.RGG_ChKP)):
+                        if self.coord_ChKP[j][0]-self.coord_ChKP[j][1]/2< i+self.N_otst_r+1<= self.coord_ChKP[j][0]+self.coord_ChKP[j][1]/2:
+                            # добавление в столбцы исходной РГГ столбцов РГГ ЧКП 
+                            stc += self.RGG_ChKP[j][:, self.ChKP_column_count[j]]
+                            self.ChKP_column_count[j] += 1
+                                    
+                fft_stc = np.fft.fft(stc)
+                # создание свертки комплексного столбца и опорной функции
+                svRG = fft_stc*sp_OF
+                svRG = np.fft.ifft(svRG)
+                # создание фрейма для записи
+                write_frame = np.zeros(2*self.power_two)
+                write_frame[0:self.power_two] = svRG.real
+                write_frame[self.power_two:2*self.power_two] = svRG.imag
+                write_frame.astype(np.float32).tofile(rpg_file)  # Запись в файл
           
     
     def azimuth_convolution_ChKP(self, 
@@ -258,13 +256,13 @@ class Convolution():
         with Halo(text='Подготовка данных', spinner="dots2",  placement='right', color="white", ):
             # АРЛИ суммарной РГГ
             RLI1 = np.fft.fftshift(RLI1, axes=1)
-        # сохранение файла описания
-        project_json_writer(self)
         # сохранение изображения
         self.save_RLI_PIL(RLI1)
+        with Halo(text='Удаление временных файлов', spinner="dots2",  placement='right', color="white", ):
+            remove(self.path_output_rpt)
     
     def save_RLI_PIL(self, RLI:np.ndarray) -> None:
-        with Halo(text='Формирование РЛИ                  ', spinner="dots2",  placement='right', color="white", ):
+        with Halo(text='Формирование РЛИ', spinner="dots2",  placement='right', color="white", ):
             
             min = 8
             max = 19659743
@@ -298,7 +296,7 @@ if __name__ == '__main__':
     ChKP=[[10000, 3000, 40, 100, 500]]
 
 
-    sf = Convolution(param_RSA, "F:/RGG source/185900", "1", ROI=[0, 2000, 20000, 3000], ChKP_param=[])
+    sf = Convolution(param_RSA, "example", "example", "Компакт", ROI=[0, 2000, 20000, 3000], ChKP_param=[])
 
     sf.range_convolution_ChKP()
     sf.azimuth_convolution_ChKP()
