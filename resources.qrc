@@ -2,9 +2,16 @@
   <qresource prefix="btn">
     <file>qt_forms/resources/ruler.png</file>
     <file>qt_forms/resources/ampl_line.png</file>
-    <file>qt_forms/resources/ampl_rect.png</file>
+    <file>qt_forms/resources/save_SAP.png</file>
+    <file>qt_forms/resources/add_RCA.png</file>
+    <file>qt_forms/resources/del_RCA.png</file>
+    <file>qt_forms/resources/save_RCA.png</file>
+    <file>qt_forms/resources/refresh.png</file>
+    <file>qt_forms/resources/save_RSA.png</file>
+    <file>qt_forms/resources/del_RSA.png</file>
   </qresource>
    <qresource prefix="ico">
+    <file>qt_forms/resources/icon.png</file>
     <file>qt_forms/resources/RSA.png</file>
   </qresource>
 </RCC>

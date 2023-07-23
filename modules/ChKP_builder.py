@@ -30,7 +30,8 @@ class ChKPBuider():
                 self.RSA_param.coord_ChKP.append(coord_ChKP)
                 self.RSA_param.RGG_ChKP.append(RGG_ChKP)
                 
-                print(f'Сформирована {i+1}-я ЧКП, время: {np.round(time.time()-self.start_time, 2)} c.')
+                if not self.RSA_param.fon:
+                    print(f'Сформирована {i+1}-я ЧКП, время: {np.round(time.time()-self.start_time, 2)} c.')
    
         def get_ChKP_RGG(self, ChKP_param):
             """Метод производит синтезировать РГГ ЧКП"""           

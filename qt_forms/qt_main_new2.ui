@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string>Модель САП</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="resources.qrc">
-    <normaloff>:/resources/icon.png</normaloff>:/resources/icon.png</iconset>
-  </property>
   <property name="toolButtonStyle">
    <enum>Qt::ToolButtonIconOnly</enum>
   </property>
@@ -62,16 +58,6 @@
      <string>Исходное РЛИ</string>
     </property>
    </widget>
-   <widget class="QGraphicsView" name="canvas_SAP">
-    <property name="geometry">
-     <rect>
-      <x>580</x>
-      <y>30</y>
-      <width>516</width>
-      <height>350</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
@@ -91,7 +77,7 @@
      <string>РЛИ с САП</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="save_full_RLI">
+   <widget class="QPushButton" name="get_RLI">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -107,7 +93,7 @@
      <string>Вывести РЛИ</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="save_img_RSA">
+   <widget class="QPushButton" name="save_full_RLI">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -138,253 +124,23 @@
     <property name="currentIndex">
      <number>0</number>
     </property>
-    <widget class="QWidget" name="tab">
+    <widget class="QWidget" name="tab_1">
      <attribute name="title">
-      <string>Параметры САП</string>
+      <string>Создание САП</string>
      </attribute>
-     <widget class="QPushButton" name="create_SAP">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>1</x>
-        <y>230</y>
-        <width>160</width>
-        <height>30</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Создать САП</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="solve_SAP">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>171</x>
-        <y>230</y>
-        <width>160</width>
-        <height>30</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Расчитать САП</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="save_SAP">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>341</x>
-        <y>230</y>
-        <width>170</width>
-        <height>30</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Сохранить РЛИ с САП</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="add_element_SAP">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>1</x>
-        <y>6</y>
-        <width>160</width>
-        <height>25</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Добавить элемент САП</string>
-      </property>
-      <property name="icon">
-       <iconset resource="resources.qrc">
-        <normaloff>:/resources/add_RCA.png</normaloff>:/resources/add_RCA.png</iconset>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="del_element_SAP">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>172</x>
-        <y>6</y>
-        <width>160</width>
-        <height>25</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Удалить элемент САП</string>
-      </property>
-      <property name="icon">
-       <iconset>
-        <normaloff>resources/del_RCA.png</normaloff>resources/del_RCA.png</iconset>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="save_param_SAP">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>345</x>
-        <y>7</y>
-        <width>160</width>
-        <height>25</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Удалить элемент САП</string>
-      </property>
-      <property name="icon">
-       <iconset>
-        <normaloff>resources/del_RCA.png</normaloff>resources/del_RCA.png</iconset>
-      </property>
-     </widget>
     </widget>
-    <widget class="QWidget" name="tab_3">
+    <widget class="QWidget" name="tab_2">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <attribute name="title">
       <string>Обработка изображения</string>
      </attribute>
     </widget>
-    <widget class="QWidget" name="tab_2">
+    <widget class="QWidget" name="tab_3">
      <attribute name="title">
       <string>Оценка энергетических характеристик</string>
      </attribute>
-     <widget class="QPushButton" name="bt_get_estimation">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>160</y>
-        <width>170</width>
-        <height>30</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Провести оценку</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_6">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>200</y>
-        <width>80</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="pixmap">
-       <pixmap>resources/PGк.png</pixmap>
-      </property>
-     </widget>
-     <widget class="QGroupBox" name="Type_RSA_KA">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>50</y>
-        <width>171</width>
-        <height>101</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Выбор типа космического РСА</string>
-      </property>
-      <widget class="QComboBox" name="change_RSA_KA">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>20</y>
-         <width>151</width>
-         <height>30</height>
-        </rect>
-       </property>
-       <property name="editable">
-        <bool>false</bool>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="add_RSA_KA">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>60</y>
-         <width>151</width>
-         <height>30</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Изменение параметров РСА</string>
-       </property>
-      </widget>
-     </widget>
-     <widget class="QLabel" name="PGk">
-      <property name="geometry">
-       <rect>
-        <x>94</x>
-        <y>198</y>
-        <width>47</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <family>Times New Roman</family>
-        <pointsize>12</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-     <widget class="QLabel" name="Ksab">
-      <property name="geometry">
-       <rect>
-        <x>62</x>
-        <y>228</y>
-        <width>47</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <family>Times New Roman</family>
-        <pointsize>12</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
      <widget class="QGroupBox" name="Amp_character">
       <property name="enabled">
        <bool>true</bool>
@@ -398,37 +154,23 @@
        </rect>
       </property>
       <property name="title">
-       <string>Амплитудные характеристики изображения</string>
+       <string>Характеристики изображения</string>
       </property>
      </widget>
-     <widget class="QLabel" name="label_9">
+     <widget class="QGroupBox" name="RSA_KA_box">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>10</x>
         <y>10</y>
-        <width>47</width>
-        <height>21</height>
+        <width>191</width>
+        <height>231</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Кр =</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="Kp_line">
-      <property name="geometry">
-       <rect>
-        <x>66</x>
-        <y>12</y>
-        <width>40</width>
-        <height>20</height>
-       </rect>
+      <property name="title">
+       <string>Мощность САП для КА</string>
       </property>
      </widget>
     </widget>
@@ -489,16 +231,6 @@
      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
     </property>
    </widget>
-   <widget class="QGraphicsView" name="canvas_SAP_2">
-    <property name="geometry">
-     <rect>
-      <x>5</x>
-      <y>30</y>
-      <width>516</width>
-      <height>350</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="Line" name="line">
     <property name="geometry">
      <rect>
@@ -601,19 +333,6 @@
     </property>
     <property name="orientation">
      <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_8">
-    <property name="geometry">
-     <rect>
-      <x>690</x>
-      <y>380</y>
-      <width>301</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Среднее значение интенсивности ЧКП</string>
     </property>
    </widget>
    <widget class="QGroupBox" name="type_RSA_2">
@@ -632,147 +351,25 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="QGraphicsView" name="canvas_SAP_2">
+   <widget class="QLabel" name="Ksab">
     <property name="geometry">
      <rect>
-      <x>5</x>
-      <y>30</y>
-      <width>516</width>
-      <height>350</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="Line" name="line">
-    <property name="geometry">
-     <rect>
-      <x>300</x>
-      <y>390</y>
-      <width>221</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
-   <widget class="Line" name="line_2">
-    <property name="geometry">
-     <rect>
-      <x>5</x>
-      <y>390</y>
-      <width>220</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
-   <widget class="Line" name="line_3">
-    <property name="geometry">
-     <rect>
-      <x>520</x>
-      <y>385</y>
-      <width>3</width>
-      <height>12</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
-    </property>
-   </widget>
-   <widget class="Line" name="line_4">
-    <property name="geometry">
-     <rect>
-      <x>5</x>
-      <y>385</y>
-      <width>3</width>
-      <height>12</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
-    </property>
-   </widget>
-   <widget class="Line" name="line_5">
-    <property name="geometry">
-     <rect>
-      <x>533</x>
-      <y>220</y>
-      <width>3</width>
-      <height>160</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
-    </property>
-   </widget>
-   <widget class="Line" name="line_6">
-    <property name="geometry">
-     <rect>
-      <x>525</x>
-      <y>372</y>
-      <width>9</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
-   <widget class="Line" name="line_7">
-    <property name="geometry">
-     <rect>
-      <x>533</x>
-      <y>30</y>
-      <width>3</width>
-      <height>170</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
-    </property>
-   </widget>
-   <widget class="Line" name="line_8">
-    <property name="geometry">
-     <rect>
-      <x>525</x>
-      <y>23</y>
-      <width>9</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_8">
-    <property name="geometry">
-     <rect>
-      <x>690</x>
-      <y>380</y>
-      <width>301</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Среднее значение интенсивности ЧКП</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label">
-    <property name="geometry">
-     <rect>
-      <x>340</x>
-      <y>570</y>
-      <width>85</width>
+      <x>412</x>
+      <y>658</y>
+      <width>47</width>
       <height>21</height>
      </rect>
     </property>
+    <property name="font">
+     <font>
+      <family>Times New Roman</family>
+      <pointsize>12</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
     <property name="text">
      <string/>
-    </property>
-    <property name="pixmap">
-     <pixmap>resources/PGав.png</pixmap>
     </property>
    </widget>
   </widget>
@@ -790,11 +387,7 @@
  </widget>
  <tabstops>
   <tabstop>open_file</tabstop>
-  <tabstop>create_SAP</tabstop>
-  <tabstop>solve_SAP</tabstop>
-  <tabstop>canvas_SAP</tabstop>
-  <tabstop>save_SAP</tabstop>
-  <tabstop>save_full_RLI</tabstop>
+  <tabstop>get_RLI</tabstop>
  </tabstops>
  <resources>
   <include location="resources.qrc"/>

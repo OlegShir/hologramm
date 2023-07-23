@@ -1,17 +1,19 @@
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem
-from PyQt5.QtCore import Qt, QPoint, QPropertyAnimation, QPointF, QRectF, QLineF
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsTextItem, QFileDialog
+from PyQt5.QtCore import Qt, QPoint, QPropertyAnimation, QPointF, QRectF, QLineF, QRect
 from PyQt5.QtGui import QPainter, QPixmap, QImage, QPen, QFont
 from modules.massager import MSGLabel
 from PIL import Image, ImageEnhance
+import numpy as np
 import math
 Image.MAX_IMAGE_PIXELS = None
 
 
 class ImageAnalizator(QGraphicsView):
-    def __init__(self, parent=None):
-        super(ImageAnalizator, self).__init__(parent)
+    def __init__(self, parent_widget):
+        super(ImageAnalizator, self).__init__(parent_widget)
 
-        self.setEnabled(False)
+        self.parent_widget = parent_widget
+
         # Create a scene for displaying images
         self.graphics_scene = QGraphicsScene(self)
         self.setScene(self.graphics_scene)
@@ -24,18 +26,6 @@ class ImageAnalizator(QGraphicsView):
         self.ysize_RLI_pixmap: int
         # инициализация ссылки обработку изображения
         self.msg: MSGLabel
-        # инициализация работы с метками ЧКП
-        self.pixmap_item = QGraphicsPixmapItem()
-        self.graphics_scene.addItem(self.pixmap_item)
-        # инициализация масштаба
-        self.scale_factor: float = 1.0
-        # инициализация позиция мыши и размера 
-        self.initial_pos: QPoint
-
-        # начальные параметры изображения
-        self.brightness_value = 1.0
-        self.contrast_value = 1.0
-        self.exp_value = 1.0
 
         # переменные для измерения расстояния
         self.point1_item = QGraphicsEllipseItem()
@@ -44,15 +34,41 @@ class ImageAnalizator(QGraphicsView):
         self.distance_text_item = QGraphicsTextItem()
         self.dragging_point_index = 0
         self.point_radius = 5
-        self.ruler = False
         self.coef_px_to_meters:float
-        self.star_ruler: bool = False
 
         # Enable zooming
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.setRenderHint(QPainter.Antialiasing)
         self.setRenderHint(QPainter.SmoothPixmapTransform)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+        self.set_init()
+    
+
+        
+    def set_init(self) -> None:
+        
+        self.ruler = False
+        self.star_ruler: bool = False
+
+        # начальные параметры изображения
+        self.brightness_value = 1.0
+        self.contrast_value = 1.0
+        self.exp_value = 1.0
+        
+        self.setEnabled(False)
+
+        # инициализация масштаба
+        self.scale_factor: float = 1.0
+        # инициализация позиция мыши и размера 
+        self.initial_pos: QPoint
+
+        # Если есть рисунки -> удаляем
+        if len(self.graphics_scene.items()):
+            for item in self.graphics_scene.items():
+                self.graphics_scene.removeItem(item)
+        self.pixmap_item = QGraphicsPixmapItem()
+        self.graphics_scene.addItem(self.pixmap_item)
 
     def set_link(self, table, msg: MSGLabel) -> None:
         self.table = table
@@ -106,6 +122,7 @@ class ImageAnalizator(QGraphicsView):
         super(ImageAnalizator, self).mousePressEvent(event)
     
     def mouseMoveEvent(self, event):
+        self.threshold(self.parent_widget.ampl_char.mask_slider.value())
         # Handle mouse move event for moving the image
         if event.buttons() == Qt.LeftButton: # type: ignore 
 
@@ -202,12 +219,12 @@ class ImageAnalizator(QGraphicsView):
         
         self.setEnabled(True)
         # загрузка изображения на просмотр
-        self.update_display_image()
+        self.update_display_image(self.copy_image)
         self.min_ratio, self.max_ratio = self.get_limit_ratio()
 
-    def update_display_image(self):
+    def update_display_image(self, image_in):
         # Преобразование изображения PIL в QImage
-        image_qt = QImage(self.copy_image.tobytes(), self.image_width, self.image_height, self.image_width, QImage.Format_Grayscale8)
+        image_qt = QImage(image_in.tobytes(), self.image_width, self.image_height, self.image_width, QImage.Format_Grayscale8)
         # Создание QPixmap из QImage
         image = QPixmap.fromImage(image_qt)
         # Установка изображения в ImageView
@@ -228,7 +245,7 @@ class ImageAnalizator(QGraphicsView):
         sharpness_enhancer = ImageEnhance.Sharpness(adjusted_image)
         self.copy_image = sharpness_enhancer.enhance(exp_value)
         
-        self.update_display_image()
+        self.update_display_image(self.copy_image)
  
     # -----------------Функции управления и изменение линейки--------------
 
@@ -264,10 +281,6 @@ class ImageAnalizator(QGraphicsView):
         for item in stack:
             if item in self.graphics_scene.items():
                 self.graphics_scene.removeItem(item)
-        # self.graphics_scene.removeItem(self.point1_item)
-        # self.graphics_scene.removeItem(self.point2_item)
-        # self.graphics_scene.removeItem(self.line_item)
-        # self.graphics_scene.removeItem(self.distance_text_item)
         self.ruler = False
         # Включаем передвижение для картинки и возвращаем курсор
         self.setDragMode(QGraphicsView.ScrollHandDrag)
@@ -287,5 +300,50 @@ class ImageAnalizator(QGraphicsView):
             return True
         else:
             return False
+        
+    def threshold(self, value) -> None:
+        """Метод производит пороговую бинаризацию изображения делая черными пиксели ниже value"""
+        # Применяем пороговую обработку с сохранением значений выше порога
+        self.copy_image_threshold = self.copy_image.copy()
 
+        self.copy_image_threshold = self.copy_image_threshold.point(lambda pixel: pixel if pixel > value else 0, "L")
+
+        self.update_display_image(self.copy_image_threshold)
+
+        self.count_pixels_above_value(value)
+        
+    def count_pixels_above_value(self, value):
+
+        # Преобразуем изображение PIL в массив numpy
+        image_np = np.array(self.copy_image_threshold)
+        
+        # Получаем границы видимой области в координатах изображения
+        visible_rect = self.mapToScene(self.viewport().geometry()).boundingRect().toRect()
+        x, y, width, height = visible_rect.getCoords()
+
+        # Формируем область слайсера
+        x0 = 0 if x < 1 else x
+        y0 = 0 if y < 1 else y
+        x1 = self.image_width - 1 if width > self.image_width + x0 else width
+        y1 = self.image_height - 1 if width > self.image_height+ y0 else height
+
+        slice_region = image_np[y0:y1, x0:x1]
+        
+        # Считаем количество значений выше порога
+        count_px = np.sum(slice_region > value)
+        mean_px = round(np.mean(slice_region),2)
+        # Подставляем значения
+        self.parent_widget.ampl_char.count_label.setText(str(count_px))
+        self.parent_widget.ampl_char.mean_label.setText(str(mean_px))
+
+    def save_image(self) -> None:
+        """Метод позволяет сохранять видимое в левом окне изображение"""
+        file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить изображение", "", "PNG Image (*.png);;JPEG Image (*.jpg *.jpeg)")
+
+        if file_path:
+            visible_rect = self.viewport().rect()
+            pixmap = self.viewport().grab(visible_rect)
+            pixmap.save(file_path)    
+
+        
 

@@ -3,96 +3,91 @@ import os.path
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget, QSlider, QGridLayout
 from PyQt5 import QtWidgets, uic
+from PyQt5.QtGui import QPixmap, QIcon
+
 from modules.image_viewer import ImageView
-from modules.ChKP_table import ChkpTable
+from modules.ChKP_table_2 import ChkpTable_2
 from modules.file_manager import FileWorker
 from modules.massager import MSGLabel
-from modules.convolution5 import Convolution
+from modules.convolution6 import Convolution
 from modules.image_analizator import ImageAnalizator
-from modules.RSA_KA import RSAKA
 from modules.sliders_img import SliderIMG
 from modules.ampl_char import AmplChar
 from modules.type_RSA_widget import TypeRSA
 from modules.constant import RSA
-
+from modules.fon_param import FonParam
+from modules.RSA_KA_box import RSAKABOX
 
 class MainForm(QtWidgets.QMainWindow):
     """Класс основного окна программы"""
 
     def __init__(self):
         super(MainForm, self).__init__()
-        # расположение проекта
-        self.file_path_prj: str = ''
-        # имя файлов проекта: изображение, голограмма, фаил описания РСА
-        self.file_name: str = ''
-        # выделенное место для программы свертки
-        self.convolution: Convolution
-        # Индекс выбранного РСА
-        self.RSA_name = " "
-        self.RSA_param = []
+
 
         # загрузка файла интерфейса основного окна
         uic.loadUi('qt_forms/qt_main_new2.ui', self)
-        # загрузка интерфейса таблицы ЧКП
-        self.table_Chkp = ChkpTable(self.tabWidget.widget(0))  
-        # загрузка интерфейса левого окна
-        self.image_view = ImageView(self)
-        # загрузка интерфейса правого окна
-        self.image_analizator = ImageAnalizator(self)
-        # загрузка мессенджер
-        self.msg = MSGLabel(self)
-        # заголовок масштаба по оси х
-        self.label_meters_x.setHidden(True)
-        # заголовок масштаба по оси у
-        self.label_meters_y.setHidden(True)
-        # явно передаем в левый вивер таблицу ЧКП и мессенджер
-        self.image_view.set_link(self.table_Chkp, self.msg, self.label_meters_x, self.label_meters_y)
-        # явно передаем таблицу ЧПК в левый вивер и мессенджер
-        self.table_Chkp.set_link(self.image_view, self.msg)
+        pixmap = QPixmap(':/ico/qt_forms/resources/icon.png')
+        self.setWindowIcon(QIcon(pixmap))
 
-        # self.image_analizator.set_coef_px_to_meters([0.26,0.26])
-        # self.image_analizator.open_file('example/example_ROI.png')
+
+
+        # выделенное место для программы свертки
+        self.convolution: Convolution
+
+        # Создание виджета мессенджера
+        self.msg = MSGLabel(self)
+
+        # Создание виджета "Тип авиационного РСА"
+        layout_type_RSA = QtWidgets.QVBoxLayout(self.type_RSA_2)
+        self.type_RSA_widget = TypeRSA(parent_widget=self)
+        layout_type_RSA.addWidget(self.type_RSA_widget)
+        # Создание виджета левого окна
+
+        self.image_view = ImageView(self)
+        # Создание виджета правого окна
+        self.image_analizator = ImageAnalizator(self)
+
+        # Создание мессенджера
+        self.msg = MSGLabel(self)
+
+        # Создание виджета на первой вкладке с параметрами ЧКП
+        layout_ChKP = QtWidgets.QVBoxLayout(self.tabWidget.widget(0))
+        self.table_Chkp_2 = ChkpTable_2(parent_widget=self) 
+        layout_ChKP.addWidget(self.table_Chkp_2) 
+        # явно передаем в левый вивер таблицу ЧКП и мессенджер
+        self.image_view.set_link(self.table_Chkp_2, self.msg, self.label_meters_x, self.label_meters_y)
         
         # Создание виджетов ползунков
         layout_slt = QtWidgets.QVBoxLayout(self.tabWidget.widget(1))
-        self.slider_image_analizator = SliderIMG()
-        self.slider_image_analizator.set_link(self.image_analizator)
+        self.slider_image_analizator = SliderIMG(parent_widget=self)
         # Добавление ползунков на вторую вкладку
         layout_slt.addWidget(self.slider_image_analizator)
 
         # Создание виджетов амплитудных характеристик
         layout_ampl = QtWidgets.QVBoxLayout(self.Amp_character)
-        self.ampl_char = AmplChar()
+        self.ampl_char = AmplChar(parent_widget = self)
         # Добавление ползунков на вторую вкладку
         layout_ampl.addWidget(self.ampl_char)
-        self.ampl_char.set_link(self.image_analizator)
 
-        # Создание виджетов Тип авиационного РСА
-        layout_type_RSA = QtWidgets.QVBoxLayout(self.type_RSA_2)
-        self.type_RSA_widget = TypeRSA(parent_widget=self)
-        layout_type_RSA.addWidget(self.type_RSA_widget)
+        # Создание виджетов для перерасчета параметров для КА
+        layout_RSA_KA = QtWidgets.QVBoxLayout(self.RSA_KA_box)
+        self.RSA_KA = RSAKABOX(parent_widget = self)
+        # Добавление ползунков на вторую вкладку
+        layout_RSA_KA.addWidget(self.RSA_KA)
+
+        # Создание виджетов параметров фона
+        self.fon_param = FonParam(self)
+
 
         # нажатие открыть фаил
         self.open_file.clicked.connect(self.opening_file)
-
         # нажатие вывести РЛ-изображение
-        self.save_full_RLI.clicked.connect(self.getting_RLI)
-        # нажатие вывести создать САП
-        self.create_SAP.clicked.connect(self.creating_SAP)
-        # нажатие добавить элемент САП
-        self.add_element_SAP.clicked.connect(self.creating_element_SAP)
-        # нажатие удалить элемент САП
-        self.del_element_SAP.clicked.connect(self.delete_element_SAP)
-        # нажатие рассчитать элемент САП
-        self.solve_SAP.clicked.connect(self.solving_SAP)
-        # нажатие провести оценку
-        self.bt_get_estimation.clicked.connect(self.getting_estimation)
+        self.get_RLI.clicked.connect(self.getting_RLI)
         # нажатие сохранить РЛИ
         self.save_full_RLI.clicked.connect(self.saving_img_RSA)
 
-        # обновление данных о космических РСА
-        # self.get_RSA_KA()
-
+        self.set_init()
         # показ окна программы
         self.show()
     
@@ -103,6 +98,7 @@ class MainForm(QtWidgets.QMainWindow):
             self, "Выберите голограмму или РЛ-изображение", "", "PCA (*.rgg *.jpg *.png)")
         # если фаил выбран
         if file_path:
+            self.set_init()
             #  Инициализация класса работы с файлами
             self.file_worker = FileWorker(file_path)
             # Получение данных о файле
@@ -127,14 +123,15 @@ class MainForm(QtWidgets.QMainWindow):
                     return
                 # выставляем его в поле "Тип авиационного РСА"
                 self.type_RSA_widget.name_type_RSA.setText(self.RSA_name)
-                # активация кнопки "создать САП", "сохранение РЛ-изображения"
-                self.activate_gui(self.create_SAP, self.save_full_RLI)
+                # активация кнопки "сохранение РЛ-изображения"
+                self.activate_gui(self.save_full_RLI,self.tabWidget.widget(0))
                 # для правильного расчета метки масштаба в image_view необходимо передать значения коэффициентов пикселей в отсчеты и пикселей в метры, получаемые из dx, ndr и коэффициента сжатия изображение, получаемых из параметров РСА
                 coef_px_to_count, coef_px_to_meters = self.scale_factor_px_to_count_and_meters(self.RSA_param)
                 self.image_view.set_scale_factor_px_to_count_and_meters(coef_px_to_count, coef_px_to_meters)
                 # передаем коэффициент перевода из пикселей в метры в класс ImageAnalizator для расчета линейки
                 self.image_analizator.set_coef_px_to_meters(coef_px_to_meters)
                 self.image_view.open_file(file_path)
+                self.fon_param.set_init_OK_param(self.RSA_param.get("Значение фона в дБ"))
             elif file_type == 'rgg':
                 self.type_RSA_widget.btn_param.setEnabled(True)
             else:
@@ -150,66 +147,85 @@ class MainForm(QtWidgets.QMainWindow):
         # Создание JSON файл проекта
         self.file_worker.project_json_writer(self.RSA_name, self.RSA_param)
         self.image_view.open_file(f'{self.file_path_prj}/{self.file_name}.png')
-        self.activate_gui(self.create_SAP, self.save_full_RLI)
+        self.activate_gui(self.save_full_RLI)
+        self.fon_param.set_init_NOT_param()
 
-    def creating_SAP(self) -> None:
-        # Set the table headers
-        self.table_Chkp.activate_table()
-        self.activate_gui(self.add_element_SAP)
-
-    def solving_SAP(self) -> None:
+    def solving_SAP(self, ChKP_params) -> None:
         """Получение РЛИ с ЧКП"""
         # сбор параметров ЧКП вида   [[размер ЧКП по наклонной дальности, размер ЧКП по азимуту, мощность ЧПК,
         #                              координата x ЧКП внутри исходной РГГ (отсчеты), координата у ЧКП внутри исходной РГГ (отсчеты)], [...]...]
         # Получаем список ROI в отсчетах
-        ROI = self.image_view.get_ROI_in_count()
-        # Получение значений ЧКП
-        ChKP_params = self.table_Chkp.data_collector()
-        if not ChKP_params:
-            return           
-        
+        ROI = self.image_view.get_ROI_RLI_in_count()
         try:
-            RLI = Convolution(self.RSA_param, self.file_path_prj, self.file_name, self.RSA_name, ChKP_params, ROI=ROI)
+            RLI = Convolution(self.RSA_param, self.file_path_prj, self.file_name, self.RSA_name, ChKP_params, ROI=ROI, save_ROI_to_np=True)
             RLI.range_convolution_ChKP()
             RLI.azimuth_convolution_ChKP()
             self.image_analizator.open_file(f'{self.file_path_prj}/{self.file_name}_ROI.png')
-            self.activate_gui(self.save_SAP)
+            self.activate_gui(self.tabWidget.widget(1), self.tabWidget.widget(2))
         except Exception as e:
             print(e)
             self.msg.set_text("Количество отсчетов отличается от РСА", color='r')
-     
+        self.activate_gui(self.tabWidget.widget(1), self.tabWidget.widget(2))
 
-    def creating_element_SAP(self) -> None:
-        self.activate_gui(self.del_element_SAP, self.save_SAP, self.create_SAP, self.save_param_SAP, self.solve_SAP)
-        self.table_Chkp.add_element()
+    def solving_fon(self, ROI):
+        # Вычисление среднего значения фона
+        RLI = Convolution(self.RSA_param, self.file_path_prj, self.file_name, self.RSA_name, ROI=ROI, fon=True)
+        RLI.range_convolution_ChKP()
+        ave_fon = RLI.azimuth_convolution_ChKP()
+        # Вычисление среднего значения ЧКП
+        RLI = Convolution(self.RSA_param, self.file_path_prj, self.file_name, self.RSA_name, ROI=ROI, fon=True, ChKP_param=[[ROI[0]+ROI[2]//2,
+                                                                                                                             ROI[1]+ROI[3]//2, 
+                                                                                                                             100, 
+                                                                                                                             1000, 
+                                                                                                                             1000]])
+        RLI.range_convolution_ChKP()
+        ave_ChKP = RLI.azimuth_convolution_ChKP()
+        # Коэффициент сигнал/фон
+        coef_signal_fon = (100*ave_fon)/ave_ChKP # type: ignore
+        # Записываем значение в словарь и фаил JSON
+        self.RSA_param["Коэффициент сигнал/фон"] = coef_signal_fon
+        self.RSA_param["Значение фона в дБ"] = float(self.fon_param.fon_DB.text())
+        # Записываем значения в JSON
+        self.file_worker.update_json_value(["Коэффициент сигнал/фон","Значение фона в дБ"],
+                                            [self.RSA_param["Коэффициент сигнал/фон"],
+                                             self.RSA_param["Значение фона в дБ"] 
+                                            ]
+                                          )
+        self.fon_param.set_init_OK_param(self.RSA_param["Значение фона в дБ"])
+        self.activate_gui(self.tabWidget.widget(0))
 
-    def delete_element_SAP(self) -> None:
-        self.table_Chkp.delete_element()
-
-    def getting_estimation(self) -> None:
-        """Расчет необходимой мощности РСК КА"""
-        # проверяем правильность ввода параметра Кр
-        Kp_str = self.Kp_line.text()
-        if Kp_str.isdigit():
-            Kp = int(Kp_str)
-        elif Kp_str.isdecimal():
-            Kp = float(Kp_str)
-        else:
-            self.msg.set_text("Не правильный формат данных", color='r')
-            return
-        ChKP_params = self.table_Chkp.data_collector()
-        if not ChKP_params:
-            return
-        # получаем параметры выбранного РСА КА
-        RSA_KA_param = self.RSA_KA.connect.get_list_param_RSA(self.change_RSA_KA.currentText())
-        if RSA_KA_param:
-            # создаем экземпляр РСА КА
-            RSA_KA = RSAKA(RSA_KA_param) 
-            PG = 0
-            for i in range(len(ChKP_params)):
-                PG += RSA_KA.get_PG(Kp, ChKP_params[i][3], ChKP_params[i][4])
-            self.PGk.setText(str(PG))
-            
+    def set_init(self):
+        """Метод возвращает значения программы в исходный вид"""
+        # Очистка параметров
+        # расположение проекта
+        self.file_path_prj: str = ''
+        # имя файлов проекта: изображение, голограмма, фаил описания РСА
+        self.file_name: str = '' 
+        # Наименование РСА
+        self.RSA_name = ' '
+        # Параметры РСА
+        self.RSA_param: dict
+        # Изменение параметров виджетов
+        self.type_RSA_widget.set_init()
+        self.image_view.set_init()
+        self.image_analizator.set_init()
+        # заголовок масштаба по оси х
+        self.label_meters_x.setHidden(True)
+        # заголовок масштаба по оси у
+        self.label_meters_y.setHidden(True)
+        self.activate_gui(self.get_RLI,
+                          self.save_full_RLI, 
+                          self.tabWidget.widget(0),
+                          self.tabWidget.widget(1),
+                          self.tabWidget.widget(2),
+                          status=False)
+        self.fon_param.set_init()
+        self.table_Chkp_2.set_init()
+        self.slider_image_analizator.set_init()
+        self.RSA_KA.set_init()
+        self.ampl_char.set_init()
+        
+        
 
     def activate_gui(self, *args, status: bool = True) -> None:
         '''Метод включает/выключает поданные элементы Qt'''
@@ -217,9 +233,12 @@ class MainForm(QtWidgets.QMainWindow):
             arg.setEnabled(status)
 
 
-    def scale_factor_px_to_count_and_meters(self, param_RSA: list):
+    def scale_factor_px_to_count_and_meters(self, param_RSA: dict):
 
-        _, _, fcvant, _, Tpi, _, _, movement_speed, _, _, coef_resize= param_RSA
+        fcvant = param_RSA.get("Частота дискретизации АЦП", 0) 
+        Tpi = param_RSA.get("Период повторения импульсов", 0)
+        movement_speed = param_RSA.get("Скорость движения носителя", 0)
+        coef_resize = param_RSA.get("Коэффициент сжатия", 0)
         
         dnr:float = 3e8 / (2 * fcvant) # шаг по дальности
         dx:float = movement_speed  * Tpi # Шаг по азимуту
@@ -232,18 +251,7 @@ class MainForm(QtWidgets.QMainWindow):
         return [coef_px_to_count_x, coef_px_to_count_y], [coef_px_to_meters_x, coef_px_to_meters_y]
     
     def saving_img_RSA(self) -> None:
-        self.msg.set_text("РЛИ сохранено ...")
-
-    # def get_RSA_KA(self) -> None:
-    #     """Функция позволят получить список РСА КА, которые есть в программе и хранятся в json.
-    #        Данные вставляются в выпадаю список 'Выбор типа авиационного РСА'"""
-    #     # подключение к базе РСА
-    #     self.RSA_KA = Adapter('json', 'RSA_KA.json')
-    #     # получаем все типы РСА КА
-    #     self.list_RSA_KA = self.RSA_KA.connect.get_list_RSA()
-    #     # обновление данных
-    #     self.change_RSA_KA.addItems(self.list_RSA_KA)       
-
+        self.image_view.save_image()
 
 
 if __name__ == "__main__":

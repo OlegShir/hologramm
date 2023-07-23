@@ -9,9 +9,6 @@ class TypeRSA(QWidget):
         super(TypeRSA, self).__init__(parent_widget,)
         self.parent_widget = parent_widget
 
-        # Создание хранилища введенных значений параметров
-        self.param_storage:list = []
-    
         layout = QVBoxLayout(self)
 
         # Создание экземпляра виджетов
@@ -20,7 +17,6 @@ class TypeRSA(QWidget):
         self.name_type_RSA.setAlignment(Qt.AlignCenter) # type: ignore
         self.name_type_RSA.setStyleSheet("background-color: #b2b5b5;")
         self.btn_param = QPushButton('Ввод параметров РСА')
-        self.btn_param.setEnabled(False)
 
         # Установка размеров 
         self.name_type_RSA.setFixedSize(140,30)
@@ -32,13 +28,23 @@ class TypeRSA(QWidget):
 
         self.btn_param.clicked.connect(self.add_param)
 
+        self.set_init()
+
+    def set_init(self) -> None:
+        """Метод возвращения к начальному виду"""
+        # Создание хранилища введенных значений параметров
+        self.param_storage:list = []
+        self.name_type_RSA.setText("")
+        self.btn_param.setEnabled(False)
+    
     def add_param(self):
         dialog = ParameterDialog(parent_widget=self)
         dialog.exec_()
 
     def update_widget(self, param_storage, index_RSA):
         self.parent_widget.RSA_name = RSA[index_RSA]
-        self.parent_widget.RSA_param = []
+        # создаем хранилище
+        param = []
         self.param_storage = param_storage
         self.name_type_RSA.setText(RSA[index_RSA])
         # приводим параметры к виду для функции свертки
@@ -48,7 +54,27 @@ class TypeRSA(QWidget):
                 value = int(self.param_storage[i])
             else:
                 value = float(self.param_storage[i])
-            self.parent_widget.RSA_param.append(value)
+            param.append(value)
+        # формируем словарь
+        # для реализации правильного вызова ключей для python < 3.7, подстановку осуществляем прямую 
+        dict_param={"Количество комплексных отсчетов": param[0],
+                    "Количество зарегистрированных импульсов": param[1],
+                    "Частота дискретизации АЦП": param[2],
+                    "Длина волны": param[3],
+                    "Период повторения импульсов": param[4],
+                    "Ширина спектра сигнала": param[5],
+                    "Длительность импульса": param[6],
+                    "Скорость движения носителя": param[7],
+                    "Размер антенны по азимуту": param[8],
+                    "Минимальная наклонная дальность": param[9],
+                    "Коэффициент сжатия": param[10],
+                    "Минимальное значение РЛИ": 0,
+                    "Максимальное значение РЛИ": 0,
+                    "Коэффициент сигнал/фон": 0,
+                    "Значение фона в дБ": 0}
+        
+        # Вставляем значения словаря в параметры родителя
+        self.parent_widget.RSA_param = dict_param
         # разблокировка кнопки "сформировать изображение"
         self.parent_widget.get_RLI.setEnabled(True)
 

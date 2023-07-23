@@ -1,1 +1,9 @@
 pyrcc5 resources.qrc -o resources.py
+
+
+Import-Module Hyper-V
+Add-VMSharedFolder -VMName "WIN7SP1" -Name "SharedFolder" -Path "C:\ShareFolder" -ReadOnly $false
+
+Set-Vm -VMName "WIN7SP1" -EnhancedSessionTransportType HvSocket
+
+Copy-VMFile -Name “Имя виртуальной машины” -SourcePath ?Путь кфайлукоторыйхотим перенести? -DestinationPath ?Путь кпапке на виртуальной машинекуда хотимположить файл?  -CreateFullPath -FileSource Host

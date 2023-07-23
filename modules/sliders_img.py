@@ -1,13 +1,16 @@
 from PyQt5.QtWidgets import QApplication, QSlider, QVBoxLayout, QWidget, QLabel, QGridLayout, QPushButton, QGraphicsView
 from PyQt5.QtCore import Qt, QRect
+from modules.image_analizator import ImageAnalizator
+from modules.helper import help
 import sys
 
 class SliderIMG(QWidget):
-    def __init__(self, parent=None):
-        super(SliderIMG, self).__init__(parent,)
+    def __init__(self, parent_widget):
+        super(SliderIMG, self).__init__(parent_widget)
 
+        self.parent_widget = parent_widget
         
-        self.image_analizator: QGraphicsView
+        self.image_analizator: ImageAnalizator = self.parent_widget.image_analizator
 
         layout = QGridLayout(self)
 
@@ -17,10 +20,18 @@ class SliderIMG(QWidget):
         self.slider_exp = QSlider(Qt.Horizontal) # type: ignore
         self.slider_contrast_text = QLabel('Изменение контраста')
         self.slider_bright_text = QLabel('Изменение яркости')
-        self.slider_exp_text = QLabel('Экспозиция')
+        self.slider_exp_text = QLabel('Изменение экспозиции')
         self.bt_contrast_reset = QPushButton('Сброс')
         self.bt_bright_reset = QPushButton('Сброс')
         self.bt_exp_reset = QPushButton('Сброс')
+
+        # Установка подсказок
+        self.slider_contrast.setToolTip(help.get('slider_contrast', ""))
+        self.slider_bright.setToolTip(help.get('slider_bright', ""))
+        self.slider_exp.setToolTip(help.get('slider_exp', ""))
+        self.bt_contrast_reset.setToolTip(help.get('bt_contrast_reset', ""))
+        self.bt_bright_reset.setToolTip(help.get('bt_bright_reset', ""))
+        self.bt_exp_reset.setToolTip(help.get('bt_exp_reset', ""))
   
         # Настройка диапазона и начального значения для slider_contrast
         self.slider_contrast.setTickPosition(QSlider.TicksAbove)  # Риски располагаются вверху от слайдера
@@ -66,15 +77,19 @@ class SliderIMG(QWidget):
         layout.addWidget(self.slider_exp, 5,0)
         layout.addWidget(self.bt_exp_reset,5,1)
 
-    
-    def set_link(self, image_analizator):
-        self.image_analizator = image_analizator
+        self.set_init()
 
+    def set_init(self) -> None:
+        self.slider_exp.setValue(10)
+        self.slider_bright.setValue(10)
+        self.slider_contrast.setValue(10)
 
     def slider_changed(self):
         self.image_analizator.adjust_image(self.slider_contrast.value()/10, 
                                            self.slider_bright.value()/10, 
                                            self.slider_exp.value()/10)
+        
+        self.parent_widget.ampl_char.slider_changed(0)
 
     def reset_value_contrast(self):
          # Обработка нажатия кнопки сброса
