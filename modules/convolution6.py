@@ -48,6 +48,7 @@ class Convolution():
         self.file_path_project = file_path_project
         self.fon = fon
         self.save_ROI_to_np = save_ROI_to_np
+        self.ROI = ROI
         # распаковка параметров РСА
         self.get_init_param_RSA(RSA_param)
         """------------------------ROI--------------------
@@ -62,7 +63,7 @@ class Convolution():
                     +------------------------------------+
         ROI = [N_otst_r, N_otst_y, Na, Ndrz]
         """
-        if ROI:
+        if self.ROI:
             # если область задана, то производится распаковка параметров
             self.N_otst_r, self.N_otst_y, self.Na, self.Ndrz  = ROI
         else:
@@ -291,10 +292,10 @@ class Convolution():
             
             if not self.min_value_px:
                 self.min_value_px = np.min(amplitude_values)
-                self.RSA_param["Минимальное значение РЛИ"] = self.min_value_px
+                self.RSA_param["Минимальное значение РЛИ"] = int(self.min_value_px)
             if not self.max_value_px:
                 self.max_value_px = np.max(amplitude_values)
-                self.RSA_param["Минимальное значение РЛИ"] = self.max_value_px    
+                self.RSA_param["Максимальное значение РЛИ"] = int(self.max_value_px)
   
             # Линейная нормализация значений                     
             normalized_values = (amplitude_values - self.min_value_px) / (self.max_value_px - self.min_value_px)
@@ -307,9 +308,12 @@ class Convolution():
             # Масштабирование изображение в соответствии с параметрами dnr и dx
             factor_r = 0.25 / self.dnr  # Коэффициент переквантования РГГ по дальности
             factor_x = 0.25 / self.dx  # Коэффициент переквантования РГГ по азимуту
-            image = image.resize((int(image.width*factor_r*self.coef_resize), int(image.height*factor_x*self.coef_resize)), Image.HAMMING)  
-            # Сохранение изображения
-            image.save(f"{self.file_path}/{self.file_name}_ROI.png")
+            image = image.resize((int(image.width*factor_r*self.coef_resize), int(image.height*factor_x*self.coef_resize)), Image.HAMMING) 
+            if not self.ROI:
+                image.save(f"{self.file_path}/{self.file_name}.png")
+            else:
+                # Сохранение изображения
+                image.save(f"{self.file_path}/{self.file_name}_ROI.png")
         
         print("РЛИ сформировано")     
 
@@ -337,7 +341,7 @@ if __name__ == '__main__':
     ChKP=[[8000, 4000, 100, 100, 100]]
 
 
-    sf = Convolution(param_RSA, "example", "example", "Компакт", ROI=[2000, 2000, 4000, 2000], ChKP_param=ChKP)
+    sf = Convolution(param_RSA, "example", "example", "Компакт", ROI=[2000, 3000, 8000, 2000], ChKP_param=[])
 
     sf.range_convolution_ChKP()
     sf.azimuth_convolution_ChKP()

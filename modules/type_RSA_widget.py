@@ -43,7 +43,7 @@ class TypeRSA(QWidget):
 
     def update_widget(self, param_storage, index_RSA):
         self.parent_widget.RSA_name = RSA[index_RSA]
-        # создаем хранилище
+        # создаем хранилище   
         param = []
         self.param_storage = param_storage
         self.name_type_RSA.setText(RSA[index_RSA])
@@ -75,6 +75,7 @@ class TypeRSA(QWidget):
         
         # Вставляем значения словаря в параметры родителя
         self.parent_widget.RSA_param = dict_param
+        self.parent_widget.getting_RLI()
         # разблокировка кнопки "сформировать изображение"
         self.parent_widget.get_RLI.setEnabled(True)
 

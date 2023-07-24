@@ -146,6 +146,11 @@ class MainForm(QtWidgets.QMainWindow):
         self.convolution.azimuth_convolution_ChKP()
         # Создание JSON файл проекта
         self.file_worker.project_json_writer(self.RSA_name, self.RSA_param)
+        # для правильного расчета метки масштаба в image_view необходимо передать значения коэффициентов пикселей в отсчеты и пикселей в метры, получаемые из dx, ndr и коэффициента сжатия изображение, получаемых из параметров РСА
+        coef_px_to_count, coef_px_to_meters = self.scale_factor_px_to_count_and_meters(self.RSA_param)
+        self.image_view.set_scale_factor_px_to_count_and_meters(coef_px_to_count, coef_px_to_meters)
+        # передаем коэффициент перевода из пикселей в метры в класс ImageAnalizator для расчета линейки
+        self.image_analizator.set_coef_px_to_meters(coef_px_to_meters)
         self.image_view.open_file(f'{self.file_path_prj}/{self.file_name}.png')
         self.activate_gui(self.save_full_RLI)
         self.fon_param.set_init_NOT_param()

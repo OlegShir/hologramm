@@ -242,11 +242,11 @@ class ImageView(QGraphicsView):
 
         return ROI_RLI_in_count
     
-    def get_ROI_fon_in_count(self):
+    def get_ROI_fon_in_count(self, count_resize):
 
         fon_rect_pos = [self.fon_rect.pos().x(),
                          self.fon_rect.pos().x(),
-                         self.fon_rect.rect().width()*5, # Чтобы можно было свернуть
+                         self.fon_rect.rect().width()*15*count_resize, # Чтобы можно было свернуть
                          self.fon_rect.rect().height(),]
         
         ROI_fon_in_count = self.get_ROI_in_count(fon_rect_pos)

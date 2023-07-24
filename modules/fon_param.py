@@ -83,6 +83,7 @@ class FonParam(QGroupBox):
         self.btn_select_fon.setEnabled(False)
         self.btn_solve_fon.setEnabled(False)
         self.fon_refresh.setChecked(False)
+        self.parent_widget.tabWidget.widget(0).setEnabled(True)
 
     def fon_refresh_clicked(self) -> None:
         if self.fon_refresh.isChecked():
@@ -135,11 +136,11 @@ class FonParam(QGroupBox):
         if self.image_viewer.fon_rect not in self.image_viewer.graphics_scene.items():
             self.parent_widget.msg.set_text("Не определена область фона", color = "r")
             return
-        if self.fon_DB == "" or "0":
+        if self.fon_DB.text() == "" or self.fon_DB.text() == "0":
             self.parent_widget.msg.set_text("Не введено значение фона", color = "r")
             return
-        # self.parent_widget.RSA_param["Значение фона в дБ"] = float(self.fon_DB.text())
-        ROI = self.image_viewer.get_ROI_fon_in_count()
+        self.parent_widget.RSA_param["Значение фона в дБ"] = float(self.fon_DB.text())
+        ROI = self.image_viewer.get_ROI_fon_in_count(self.parent_widget.RSA_param.get("Коэффициент сжатия", 0))
         self.parent_widget.solving_fon(ROI)
         self.image_viewer.graphics_scene.removeItem(self.image_viewer.fon_rect)
         self.image_viewer.star_fon_select  = False
