@@ -3,7 +3,8 @@ from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QPixmap, QIcon
 from modules.helper import help
 from modules.image_viewer import ImageView
-import sys
+
+
 
 class FonParam(QGroupBox):
     def __init__(self, parent_widget):
@@ -72,6 +73,7 @@ class FonParam(QGroupBox):
         self.fon_DB.setText("")
         self.btn_select_fon.setEnabled(True)
         self.btn_solve_fon.setEnabled(True)
+        self.update_size_fon_px()
 
     def set_init_OK_param(self, DB) -> None:
         """Метод выставляет параметры виджетов, когда есть значения фона"""
@@ -83,7 +85,13 @@ class FonParam(QGroupBox):
         self.btn_select_fon.setEnabled(False)
         self.btn_solve_fon.setEnabled(False)
         self.fon_refresh.setChecked(False)
-        self.parent_widget.tabWidget.widget(0).setEnabled(True)
+        self.parent_widget.tabWidget2.widget(0).setEnabled(True)
+        self.update_size_fon_px()
+    
+    def update_size_fon_px(self):
+        """Метод обновляет размер квадрата фона в левом окне"""
+        fon_rect_size = self.parent_widget.RSA_param.get("Коэффициент сжатия", 1)*600
+        self.parent_widget.image_view.add_fon_rect(fon_rect_size)
 
     def fon_refresh_clicked(self) -> None:
         if self.fon_refresh.isChecked():
@@ -139,10 +147,10 @@ class FonParam(QGroupBox):
         if self.fon_DB.text() == "" or self.fon_DB.text() == "0":
             self.parent_widget.msg.set_text("Не введено значение фона", color = "r")
             return
-        self.parent_widget.RSA_param["Значение фона в дБ"] = float(self.fon_DB.text())
         ROI = self.image_viewer.get_ROI_fon_in_count(self.parent_widget.RSA_param.get("Коэффициент сжатия", 0))
         self.parent_widget.solving_fon(ROI)
-        self.image_viewer.graphics_scene.removeItem(self.image_viewer.fon_rect)
+        self.btn_select_fon.setChecked(False)
+        #self.image_viewer.graphics_scene.removeItem(self.image_viewer.fon_rect)
         self.image_viewer.star_fon_select  = False
 
 

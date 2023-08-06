@@ -9,8 +9,9 @@ class SliderIMG(QWidget):
         super(SliderIMG, self).__init__(parent_widget)
 
         self.parent_widget = parent_widget
-        
         self.image_analizator: ImageAnalizator = self.parent_widget.image_analizator
+
+        self.setFixedSize(500, 235)
 
         layout = QGridLayout(self)
 

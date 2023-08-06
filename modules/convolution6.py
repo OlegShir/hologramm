@@ -17,7 +17,7 @@
                         "hemming" - используется усреднение Хэмминга
                         "none" - нормализация не производится
 """
-
+import psutil
 import numpy as np
 from progress.bar import IncrementalBar
 from PIL import Image
@@ -39,6 +39,8 @@ class Convolution():
                  accuracy = 64,
                  fon: bool = False, # Определяет, что происходит вычисление среднего значения фона
                  save_ROI_to_np:bool = False, # Сохранение свертки РОИ в фаил np
+                 count_fon= '',
+                
                  ) -> None:
         self.RSA_param = RSA_param
         self.ChKP_param = ChKP_param     
@@ -51,6 +53,7 @@ class Convolution():
         self.ROI = ROI
         # распаковка параметров РСА
         self.get_init_param_RSA(RSA_param)
+        self.count_fon = count_fon #!
         """------------------------ROI--------------------
                      ---->|N_otst_r
                 |   +-----|------------------------------+
@@ -73,7 +76,8 @@ class Convolution():
             self.Ndrz = self.Ndn
       
         self.impactChPK = False
-        self.accuracy = np.complex128 if accuracy == 128 else np.complex64
+        self.accuracy_int = accuracy
+        self.accuracy = np.complex128 if self.accuracy_int == 128 else np.complex64
 
         # выбор начального заголовка
         if self.fon:
@@ -83,10 +87,8 @@ class Convolution():
         else:
             title = "Инициализация данных"
         print(title)
-
         # настройка отображения процесса выполнения свертки
         self.suffix = '%(percent)d%% [%(elapsed_td)s / %(eta_td)s]'
-
         '''------------------------Рассчитываемые переменные-------------------------------'''
         self.power_two: int = 2**self.Ndn.bit_length() # наибольшая степени двойки для отсчетов
         self.dnr:float = 3e8/(2*self.fcvant) # шаг по дальности
@@ -103,7 +105,6 @@ class Convolution():
         n = np.arange(self.N1)
         LCHM = np.pi * self.Fsp * n**2 / (self.N1 * self.fcvant) - np.pi * self.Fsp * (n) / self.fcvant
         self.LCHM = LCHM.reshape((self.N1, 1))
-        
         # Если ChKP_param пуст - ЧКП нет
         if self.ChKP_param:
             self.impactChPK = True
@@ -117,12 +118,27 @@ class Convolution():
         else:
             self.impactChPK = False 
         self.path_output_rpt:str = self.get_path_output_rpt()
+        self.length_check_Na()
+
+    def length_check_Na(self) -> None:
+        """Метод проверяет длину Na на соответствие условию Na/2 >= Nas_bl/2"""
+        self.Na_dop = 0
+        # определение начальной наклонной дальности на выбранной ROI
+        R_start = self.R + (self.N_otst_y - 1)*self.dnr
+        # максимальное разбиение (блоков) по наклонной дальности
+        max_R_centr_bl = R_start + int((self.Ndrz//2)*2) * self.dnr
+        max_Nas_bl = int((self.lamb * max_R_centr_bl) // (2 * self.resolution_x * self.dx))
+        if self.Na < max_Nas_bl:
+            # если условие не выполняется
+            self.Na_dop = max_Nas_bl//self.Na + 1
+            # увеличиваем ширину Na
+            self.Na *= self.Na_dop
+
 
     def get_init_param_RSA(self, RSA_param:dict) -> None:
         """
         Инициализирует распаковку параметров РСА, принимаемых списком из хранилища.
         """
-
         self.Ndn:int = RSA_param.get("Количество комплексных отсчетов", 0) # количество комплексных отсчетов
         self.Na:int = RSA_param.get("Количество зарегистрированных импульсов", 0) # количество зарегистрированных импульсов
         self.fcvant:int = RSA_param.get("Частота дискретизации АЦП", 0) # частота дискретизации АЦП
@@ -133,9 +149,11 @@ class Convolution():
         self.movement_speed:float = RSA_param.get("Скорость движения носителя", 0) # скорость движения носителя
         self.AntX:float = RSA_param.get("Размер антенны по азимуту", 0) # размер антенны по азимуту
         self.R:int = RSA_param.get("Минимальная наклонная дальность", 0) # минимальная наклонная дальность
+
         self.coef_resize:float = RSA_param.get("Коэффициент сжатия", 0) # коэффициент сжатия РГГ при формировании изображения
         self.min_value_px = RSA_param.get("Минимальное значение РЛИ", 0) # Минимальное значение пикселя в матрице РЛИ
         self.max_value_px = RSA_param.get("Максимальное значение РЛИ", 0) # Максимальное значение пикселя в матрице РЛИ
+        self.quantiles = RSA_param.get("Значение квантиля", 0)
 
     def get_path_output_rpt(self) -> str:
 
@@ -146,29 +164,27 @@ class Convolution():
         else:
             # фаил с результатами свертки по дальности только исходной РГГ 
             output_file_path = f"{self.file_path}/{self.file_name}.rpt"
-
         
         return output_file_path
-    
 
-    def range_convolution_ChKP(self) -> None:
+    def range_convolution_ChKP(self, Na_full_rgg = 0, N_ots_full_rgg = 0) -> None:
+        if Na_full_rgg:
+            self.Na = Na_full_rgg
+            self.N_otst_r = N_ots_full_rgg
         # ====== Формирование ОФ для свертки зондирующего импульса ============
         N2 = self.N1 // 2
         opor_func_1 = np.zeros((self.power_two, 1), dtype=self.accuracy)
         opor_func_1[:self.N1] = np.cos(self.LCHM) + 1j * np.sin(self.LCHM) # фаза сигнала в комплексном виде
         opor_func_2 = np.zeros((self.power_two, 1), dtype=self.accuracy)
-        
         opor_func_2[:N2] = opor_func_1[N2:self.N1]                
         opor_func_2[self.power_two-N2:self.power_two] = opor_func_1[:N2]
         # ftt работает только со строкой, поэтому производится транспонирование
         sp_OF = np.fft.fft(opor_func_2.T)
         svRG = np.zeros((self.power_two,1), dtype=self.accuracy)  # Инициализация массива размером Nd с нулями
-        
         # открытие файла голограммы и файла для записи свертки по дальности
         with open(f"{self.file_path}/{self.file_name}.rgg", 'rb') as rgg_file, open(self.path_output_rpt, 'wb') as rpg_file:
             # установка начала считывания голограммы
             rgg_file.seek(2*self.Ndn*self.N_otst_r, 0)          
-            
 
             for i in IncrementalBar("Свертка исходной РГГ по дальности", suffix = self.suffix).iter(range(self.Na)):
                 # значение считываются в диапазоне от -127 до +128
@@ -197,11 +213,11 @@ class Convolution():
                 write_frame[0:self.power_two] = svRG.real
                 write_frame[self.power_two:2*self.power_two] = svRG.imag
                 write_frame.astype(np.float32).tofile(rpg_file)  # Запись в файл
-          
     
-    def azimuth_convolution_ChKP(self, 
-                                 path_input_rpt:str = ''
-                                ):
+    def azimuth_convolution_ChKP(self,
+                                 path_input_rpt:str = '',
+                                 full_RGG = False, # если свертку производить частями
+                                 ):
         
         if not path_input_rpt:
             # если путь не введен, то по умолчанию используется путь сохраненный при сворачивании по дальности
@@ -227,16 +243,12 @@ class Convolution():
         # инициализация переменных для цикла
         Las_bl = np.zeros(Nbl_r)
         RLI1: np.ndarray = np.empty((self.Ndrz, self.Na), dtype=self.accuracy)
-        # ----------------------------------
-                              
+        # ----------------------------------                      
         for i in IncrementalBar("Свертка исходной РГГ по азимуту  ", suffix = self.suffix).iter(range(Nbl_r)):
-                 
             # Наклонная дальность до центра блока в метрах
             R_centr_bl = R_start + ((i+1) * Ndr) * self.dnr  
 
             Nas_bl = int((self.lamb * R_centr_bl) // (2 * self.resolution_x * self.dx))
-            
-
             Las_bl = Nas_bl * self.dx 
             x_max = Las_bl / 2 * self.dx
             rt1_max_bl = np.sqrt(R_centr_bl ** 2 + x_max ** 2) - R_centr_bl
@@ -257,9 +269,6 @@ class Convolution():
             OF2_bl[:Ndr_bl, np.arange(Nas_bl)] = OF1_bl
             OF_bl = np.zeros((Ndr_bl, self.Na), dtype=self.accuracy)
 
-            if self.Na / 2 < Nas_bl / 2:
-                raise ValueError(f"{self.Na} --- {Nas_bl} Не выполняется условие Na/2 >= Nas_bl/2 + dsm")
-
             OF_bl[:, int(self.Na / 2 - Nas_bl / 2):int(self.Na / 2 + Nas_bl / 2)] = OF2_bl
             sp_OF_bl = np.fft.fft2(OF_bl)
             rgg1_bl = rgg1[i * Ndr:(i+1) * Ndr + dop_Ndr, :]
@@ -271,39 +280,90 @@ class Convolution():
         with Halo(text='Подготовка данных', spinner="dots2",  placement='right', color="white", ):
             # АРЛИ суммарной РГГ
             RLI1 = np.fft.fftshift(RLI1, axes=1)
-            if self.save_ROI_to_np:
-                np.save(f"{self.file_path}/{self.file_name}_ROI.flt", np.abs(RLI1))
         with Halo(text='Удаление временных файлов', spinner="dots2",  placement='right', color="white", ):
             remove(self.path_output_rpt)
+
+        # Вычисление амплитуды (модуля) 
+        amplitude_values = np.abs(RLI1)
+        # получение среднего значения яркости РОИ
         if self.fon:
-            ROI = RLI1[:, :RLI1.shape[1]//5]
-            ave_ROI = np.mean(abs(ROI))
-            return ave_ROI
+           # тут учитывается условие Na/2 >= Nas_bl/2
+           if self.Na_dop:
+               amplitude_values = amplitude_values[:, :amplitude_values.shape[1]//self.Na_dop]
+           ave_ROI = np.mean(amplitude_values).astype(float)
+        #    self.save_RLI_PIL(amplitude_values, self.count_fon)
+           return ave_ROI
+        if full_RGG:
+            return amplitude_values
+        if self.save_ROI_to_np:
+            np.save(f"{self.file_path}/{self.file_name}_ROI", amplitude_values)
         # сохранение изображения
-        self.save_RLI_PIL(RLI1)
-
-
+        self.save_RLI_PIL(amplitude_values)
     
-    def save_RLI_PIL(self, RLI:np.ndarray) -> None:
+    def full_RGG_part(self) -> None:
+        # размер в байтах одного столбца
+        size_byte_1_Na = self.Ndn * self.accuracy_int / 8
+        memory = psutil.virtual_memory()
+        memory.available
+
+        
+        part = 10
+        # вычисляем количество частей 
+        whole_part = otstup = self.Na // part
+        remainder = self.Na % part
+        for i in range(part):
+            if i == part-1:
+                whole_part += remainder
+            self.range_convolution_ChKP(Na_full_rgg = whole_part,  N_ots_full_rgg = i*otstup)
+            np_array:np.ndarray = self.azimuth_convolution_ChKP(full_RGG=True) # type: ignore
+            np.save(f"{self.file_path}/np_{i}", np_array)
+        # Создание пустого массива, куда будем объединять данные
+        merged_array = np.empty((self.Ndrz, 0), dtype=np.float32)
+        for i in range(part):  # Предполагается, что  файлы названы от "0.npy" до "9.npy"
+            file_path = f"{self.file_path}/np_{i}.npy"
+            loaded_array = np.load(file_path)
+            merged_array = np.concatenate((merged_array, loaded_array), axis=1)
+            remove(file_path)
+        
+        self.save_RLI_PIL(merged_array)       
+
+
+    def save_RLI_PIL(self, amplitude_values:np.ndarray, count = '') -> None:
         with Halo(text='Формирование РЛИ', spinner="dots2",  placement='right', color="white", ):
-            
-            # # Вычисление амплитуды (модуля) 
-            amplitude_values = np.abs(RLI)
-            
-            if not self.min_value_px:
+
+            # Отсортируем массив
+            sorted_values = np.sort(amplitude_values)
+
+            # Случай когда изображение формируется впервые
+            if not self.quantiles:
                 self.min_value_px = np.min(amplitude_values)
                 self.RSA_param["Минимальное значение РЛИ"] = int(self.min_value_px)
-            if not self.max_value_px:
                 self.max_value_px = np.max(amplitude_values)
                 self.RSA_param["Максимальное значение РЛИ"] = int(self.max_value_px)
-  
+                # Найдем квантиль 97% (0.97) массива
+                self.quantiles = np.quantile(sorted_values, 0.97)
+                self.RSA_param["Значение квантиля"] = self.quantiles
+            
+            # Вычислим диапазон значений, попадающих в исходный диапазон [2 * quantiles, max_value_px]
+            values_in_original_range = sorted_values[(sorted_values >= 2 * self.quantiles) & (sorted_values <= self.max_value_px)]
+
+            # Приведем этот диапазон к диапазону quantiles
+            new_range_min = self.quantiles
+            new_range_max = 2 * self.quantiles
+
+            # Масштабируем значения из исходного диапазона к новому диапазону
+            scaled_values = ((values_in_original_range - (2 * self.quantiles)) / (self.max_value_px - (2 * self.quantiles))) * (new_range_max - new_range_min) + new_range_min
+
+            # Обновим значения в массиве
+            amplitude_values[(amplitude_values >= 2 * self.quantiles) & (amplitude_values <= self.max_value_px)] = scaled_values
+
             # Линейная нормализация значений                     
-            normalized_values = (amplitude_values - self.min_value_px) / (self.max_value_px - self.min_value_px)
+            normalized_values = (amplitude_values - self.min_value_px) / (2*self.quantiles - self.min_value_px)
             # Преобразование в диапазон от 0 до 255
             scaled_data = (normalized_values * 255).astype(np.uint8)
 
             # Создание объекта изображения с градациями серого
-            image = Image.fromarray(scaled_data*15, mode='L')
+            image = Image.fromarray(scaled_data, mode='L')
 
             # Масштабирование изображение в соответствии с параметрами dnr и dx
             factor_r = 0.25 / self.dnr  # Коэффициент переквантования РГГ по дальности
@@ -313,9 +373,10 @@ class Convolution():
                 image.save(f"{self.file_path}/{self.file_name}.png")
             else:
                 # Сохранение изображения
-                image.save(f"{self.file_path}/{self.file_name}_ROI.png")
+                image.save(f"{self.file_path}/{self.file_name}_ROI{count}.png")
         
-        print("РЛИ сформировано")     
+            print("РЛИ сформировано")
+
 
 if __name__ == '__main__':
 
@@ -332,20 +393,41 @@ if __name__ == '__main__':
         "Размер антенны по азимуту": 0.23,
         "Минимальная наклонная дальность": 2250,
         "Коэффициент сжатия": 0.3,
-        "Минимальное значение РЛИ": 8,
-        "Максимальное значение РЛИ": 19659743,
+        "Минимальное значение РЛИ": 0,
+        "Максимальное значение РЛИ": 0,
+        "Значение квантиля": 0,
         "Коэффициент сигнал/фон": 6.53,
         "Значение фона в дБ": -12
         }
+    
+        #     "Минимальное значение РЛИ": 8  0.9324899,
+        # "Максимальное значение РЛИ": 19659743  50922690.0,
     #ChKP = [[8400, 5000, 25, 100, 450]]
     ChKP=[[8000, 4000, 100, 100, 100]]
 
 
-    sf = Convolution(param_RSA, "example", "example", "Компакт", ROI=[2000, 3000, 8000, 2000], ChKP_param=[])
+    sf = Convolution(param_RSA, "example", "example", "Компакт", ChKP_param=[])
+    sf.full_RGG_part()
+    # sf.range_convolution_ChKP()
+    # sf.azimuth_convolution_ChKP()
 
-    sf.range_convolution_ChKP()
-    sf.azimuth_convolution_ChKP()
 
     # sf.azimuth_convolution_ChKP(ROI=[0, 2000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")
     
-   
+    '''{'Количество комплексных отсчетов': 11008, 
+    'Количество зарегистрированных импульсов': 165500, 
+    'Частота дискретизации АЦП': 400000000.0, 
+    'Длина волны': 0.0351, 
+    'Период повторения импульсов': 0.000485692, 
+    'Ширина спектра сигнала': 300000000.0, 
+    'Длительность импульса': 1e-05, 
+    'Скорость движения носителя': 108, 
+    'Размер антенны по азимуту': 0.23, 
+    'Минимальная наклонная дальность': 2250, 
+    'Коэффициент сжатия': 0.3, 
+    'Минимальное значение РЛИ': 0, 
+    'Максимальное значение РЛИ': 50922688, 
+    'Значение квантиля': 412635.84375, 
+    'Коэффициент сигнал/фон': 6.53, 
+    'Значение фона 
+    в дБ': -12}'''

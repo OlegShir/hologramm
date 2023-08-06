@@ -19,27 +19,28 @@ class ChkpTable_2(QWidget):
 
         self.add_SAP = QPushButton('', self)
         self.add_SAP.setFixedSize(155,30)
+        self.add_SAP.move(10, 10)
         pixmap = QPixmap(':/btn/qt_forms/resources/add_RCA.png')
         self.add_SAP.setIcon(QIcon(pixmap))
         self.add_SAP.setText('Добавить элемент САП')
 
         self.del_SAP = QPushButton('', self)
-        self.del_SAP.move(165,0)
+        self.del_SAP.move(175,10)
         self.del_SAP.setFixedSize(155,30)
         pixmap = QPixmap(':/btn/qt_forms/resources/del_RCA.png')
         self.del_SAP.setIcon(QIcon(pixmap))
         self.del_SAP.setText('Удалить элемент САП')
 
         self.get_RLI_with_SAP = QPushButton('', self)
-        self.get_RLI_with_SAP.move(330,0)
+        self.get_RLI_with_SAP.move(340,10)
         self.get_RLI_with_SAP.setFixedSize(161,30)
         pixmap = QPixmap(':/btn/qt_forms/resources/save_RCA.png')
         self.get_RLI_with_SAP.setIcon(QIcon(pixmap))
         self.get_RLI_with_SAP.setText('Сформировать РЛИ с САП')
 
         self.table = QTableWidget(self)
-        self.table.move(0,40)
-        self.table.setFixedSize(496, 170)
+        self.table.move(10, 50)
+        self.table.setFixedSize(490, 145)
         # Создание заголовков таблицы
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(
@@ -54,18 +55,18 @@ class ChkpTable_2(QWidget):
 
         # Виджеты для выбора типа интенсивностей
         title = QLabel("Интенсивность:", self)
-        title.move(3,225)
+        title.move(11,208)
         self.var1 = QLabel("<html><b>помеха/фон</b></html>", self)
-        self.var1.move(90,225)
+        self.var1.move(100,208)
         self.slider = QSlider(Qt.Horizontal, self) # type: ignore
-        self.slider.move(180, 225)
+        self.slider.move(190, 205)
         self.slider.setFixedSize(30,20)
         self.slider.setMinimum(0)
         self.slider.setMaximum(1)
         self.slider.setValue(0)
         self.slider.setTickInterval(1)  # Отображаем риски только для значений 0 и 1
         self.var2 = QLabel("метр квадратный", self)
-        self.var2.move(220,225)
+        self.var2.move(230,208)
 
         # создаем хранилище индексов ЧКП
         self.Chkp_index_list = []
@@ -84,8 +85,9 @@ class ChkpTable_2(QWidget):
         if hasattr(self, 'Chkp_index_list'):
             if self.Chkp_index_list:
                 # Очистка левого окна от меток
-                for label in self.Chkp_index_list:
-                    self.image_viewer.graphics_scene.removeItem(label)
+                if self.image_viewer.isEnabled():
+                    for label in self.Chkp_index_list:
+                        self.image_viewer.graphics_scene.removeItem(label)
         self.Chkp_index_list = []
         # Если строки таблицы заполнялись
         if self.table.rowCount():
@@ -151,16 +153,19 @@ class ChkpTable_2(QWidget):
         if item is not None:
             try:
                 label = self.Chkp_index_list[row]
+                item = item.text()
+                item =  item.replace(",", ".")
                 if not label:
                     self.msg.set_text("Установите метку ЧКП")
                     self.table.blockSignals(True)
                     self.table.setItem(row, column, QTableWidgetItem(''))  # Очистить ячейку
                     self.table.blockSignals(False)
                     return
-                if column == 4:
-                    float(item.text())
+                if column == 2:
+                    float(item)
                     return
-                val = int(item.text())
+                
+                val = int(item)
                 # если изменяются первая и вторая колонка
                 if column == 0 or column == 1:
                     current_pos = label.pos()  # Текущая позиция метки
@@ -199,14 +204,17 @@ class ChkpTable_2(QWidget):
                     elif column == 1:
                         value = round(int(item.text())*self.image_viewer.coef_px_to_count[1])
                     elif column == 2:
-
+                        count_value = (self.parent_widget.RSA_param.get("Коэффициент сжатия", 0) * 600)**2
                         if not self.slider.value():
                             chkp_fon = self.parent_widget.RSA_param.get("Коэффициент сигнал/фон", 0)
-                            value = float(item.text())*chkp_fon/(40000/(int(self.table.item(row, 3).text())*int(self.table.item(row, 4).text())))
+                            with open('t.txt', 'r') as file:
+                                dop = float(file.readline().strip())  # Читаем первую строку и преобразуем в число с плавающей точкой
+                            value = (float(item.text())/chkp_fon)*dop
+                            # value = float(item.text())*chkp_fon*((int(self.table.item(row, 3).text())*int(self.table.item(row, 4).text()))/count_value*self.image_viewer.coef_px_to_meters[0])
                         else:
                             fon_DB = self.parent_widget.RSA_param.get("Значение фона в дБ", 0)
                             Kp = float(item.text())/(10**(fon_DB/10))
-                            value = Kp/(40000/(int(self.table.item(row, 3).text())*int(self.table.item(row,4).text())))
+                            value = Kp/(count_value/(int(self.table.item(row, 3).text())*int(self.table.item(row,4).text())))
                     else:
                         value = int(item.text())
                     data_ChKp.append(value)

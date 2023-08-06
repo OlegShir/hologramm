@@ -6,7 +6,7 @@ class MSGLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setGeometry(20,670,600,16)
+        self.setGeometry(20,630,600,16)
 
         # Установка настроек таймера
         self.timer = QTimer()
@@ -28,7 +28,7 @@ class MSGLabel(QLabel):
     
     def set_text(self, text: str, color = "b", duration: int = 2000):
         # Преобразование цвета в формат QColor
-        qcolor = QColor(self.color_codes.get(color, "b"))
+        qcolor = QColor(self.color_codes.get(color))
         # Установка цвета текста
         self.setStyleSheet(f"color: {qcolor.name()};")
         self.setText(text)

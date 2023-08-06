@@ -1,9 +1,10 @@
-from PyQt5.QtWidgets import QFrame, QSlider, QLineEdit, QWidget, QLabel, QGridLayout, QPushButton, QGraphicsView
+from PyQt5.QtWidgets import QFrame, QSlider, QLineEdit, QWidget, QLabel, QGridLayout, QPushButton, QGroupBox
 from PyQt5.QtCore import Qt, QRect, QSize
 from PyQt5.QtGui import QPixmap, QIcon
 from modules.helper import help
 from modules.image_analizator import ImageAnalizator
-import sys
+from modules.ampl_line import GraphAmplitudeValue
+from halo import Halo
 import resources
 
 class AmplChar(QWidget):
@@ -12,8 +13,13 @@ class AmplChar(QWidget):
 
         self.parent_widget = parent_widget
         self.image_analizator:ImageAnalizator = self.parent_widget.image_analizator
+
+        self.setFixedSize(295, 231)
+
+        self.box = QGroupBox("Характеристики изображения", self)
+        self.box.setFixedSize(295, 231)
     
-        layout = QGridLayout(self)
+        layout = QGridLayout(self.box)
 
         # Создание экземпляра кнопок
         self.ruler = QPushButton('')
@@ -90,15 +96,14 @@ class AmplChar(QWidget):
         self.mask_value.editingFinished.connect(self.edit_finish)
         self.mask_slider.valueChanged.connect(self.slider_changed)
 
-        self.save_SAP.clicked.connect(self.save_SAP_clicked)
-        
+        self.ampl_line.clicked.connect(self.get_ampl_line_graph)
 
+        self.save_SAP.clicked.connect(self.save_SAP_clicked)
 
     def set_init(self) -> None:
         self.last_mask_value = 0
         self.mask_value.setText(str(self.last_mask_value))
         self.mask_slider.setValue(self.last_mask_value)
-
 
     def on_text_changed(self, text:str) -> None:
         if text == '':
@@ -134,3 +139,17 @@ class AmplChar(QWidget):
             # Отжата            
             self.image_analizator.star_ruler  = False
             self.image_analizator.ruler_clear()
+
+    def get_ampl_line_graph(self) -> None:
+        """Метод строит амплитудную линию"""
+        # проверка что нарисованы две точки
+        if not self.image_analizator.ruler:
+            self.parent_widget.msg.set_text("Линия не установлена", color = 'r')
+        if self.image_analizator.ruler:
+                with Halo(text='Расчет амплитудных значений', spinner="dots2",  placement='right', color="white", ):
+                    GraphAmplitudeValue(self.image_analizator.point1_item.pos().toPoint(),
+                                        self.image_analizator.point2_item.pos().toPoint(),
+                                        self.image_analizator.coef_px_to_count,
+                                        self.image_analizator.coef_px_to_meters,
+                                        self.parent_widget.RSA_param.get("Абсолютное среднее значение фона",0),
+                                        f"{self.parent_widget.file_path_prj}/{self.parent_widget.file_name}_ROI.npy")

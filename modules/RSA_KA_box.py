@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QPushButton, QComboBox,QMessageBox, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
-from PyQt5.QtCore import Qt, QRect, QSize
-from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtGui import QPixmap, QIcon, QFont
 from modules.file_manager import RSAKAWorker
+
 import resources
 
 class RSAKABOX(QWidget):
@@ -9,17 +9,32 @@ class RSAKABOX(QWidget):
         super(RSAKABOX, self).__init__(parent_widget,)
         self.parent_widget = parent_widget
 
+        self.setFixedSize(191, 215)
+
+        self.main_box = QGroupBox("Мощность САП для КА", self)
+        self.main_box.setFixedSize(191, 231)
+
 
         # Создание экземпляра виджетов
-        self.Kp = QLabel("Kp = ", self)
-        self.Kp.move(10,5)
-        self.Kp_value = QLineEdit("", self)
-        self.Kp_value.setFixedSize(50, 20)
-        self.Kp_value.move(45,0)
+        self.Kp = QLabel("Kp = ", self.main_box)
+        self.Kp.move(20,20)
+        # Устанавливаем изображение
+        pixmap = QPixmap(':/value/qt_forms/resources/Ksap.png')
+        self.Kp.setPixmap(pixmap)
+        #self.Kp.setIconSize(QSize(24,24))
+        self.Kp_value = QLineEdit("", self.main_box)
+        self.Kp_value.setFixedSize(40, 20)
+        self.Kp_value.move(70,20)
+        font = QFont()
+        font.setPixelSize(12)
+        time_label = QLabel("раз", self.main_box)
+        time_label.setFont(font)
 
-        self.box = QGroupBox("Выбор космического РСА", self)
-        self.box.setFixedSize(170,90)
-        self.box.move(0, 30)
+        time_label.move(115,26)
+
+        self.box = QGroupBox("Выбор космического РСА", self.main_box)
+        self.box.setFixedSize(170,95)
+        self.box.move(10, 50)
         layout_box = QVBoxLayout(self.box)
 
         self.type_RSA = QComboBox()
@@ -31,16 +46,20 @@ class RSAKABOX(QWidget):
         layout_box.addWidget(self.type_RSA)
         layout_box.addWidget(self.btn_change_RSA)
 
-        self.btn_solve = QPushButton("Провести оценку", self)
+        self.btn_solve = QPushButton("Провести оценку", self.main_box)
         self.btn_solve.setFixedSize(150, 30)
-        self.btn_solve.move(10, 125)
+        self.btn_solve.move(20, 150)
         
 
-        self.Pg = QLabel("Pg = ", self)
-        self.Pg.move(10, 165)
-        self.Pg_value = QLabel("2322", self)
-        self.Pg_value.setFixedSize(30,20)
-        self.Pg_value.move(45,165)
+        self.Pg = QLabel("", self.main_box)
+        # Устанавливаем изображение
+        pixmap = QPixmap(':/value/qt_forms/resources/PGk.png')
+        self.Pg.setPixmap(pixmap)
+        self.Pg.move(20, 190)
+        self.Pg_value = QLabel("", self.main_box)
+        self.Pg_value.setFont(font)
+        self.Pg_value.setFixedSize(150,20)
+        self.Pg_value.move(65,191)
         
         # Добавление действий
         self.Kp_value.textChanged.connect(self.on_Kp_changed)
@@ -121,7 +140,8 @@ class RSAKABOX(QWidget):
         PG = 0
         for i in range(len(ChKP_params)):
             PG = (Kp*Pf*4*3.1415*(observation_range**2)*2*ChKP_params[i][3]*ChKP_params[i][4])/(effective_area_antenna*3e8*pulse_duration*illuminated_section)
-            self.Pg_value.setText(f"{PG} Вт.")  
+        
+        self.Pg_value.setText(f"{round(PG/1000, 3)} кВт.")  
         # получаем параметры выбранного РСА КА
         
         

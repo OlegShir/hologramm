@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QPushButton, QComboBox,QApplication, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
-from PyQt5.QtCore import Qt, QRect, QSize
+from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QPushButton, QComboBox, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QIcon
 from modules.constant import RSA 
 import resources
@@ -9,7 +9,11 @@ class TypeRSA(QWidget):
         super(TypeRSA, self).__init__(parent_widget,)
         self.parent_widget = parent_widget
 
-        layout = QVBoxLayout(self)
+        
+        self.box = QGroupBox("Тип авиационного РСА", self)
+        self.box.setFixedSize(170, 110)
+
+        layout = QVBoxLayout(self.box)
 
         # Создание экземпляра виджетов
         # здесь отображается название используемого авиационного РСА
@@ -19,8 +23,8 @@ class TypeRSA(QWidget):
         self.btn_param = QPushButton('Ввод параметров РСА')
 
         # Установка размеров 
-        self.name_type_RSA.setFixedSize(140,30)
-        self.btn_param.setFixedSize(140,30)
+        self.name_type_RSA.setFixedSize(150,30)
+        self.btn_param.setFixedSize(150,30)
 
         layout.addWidget(self.name_type_RSA)
         layout.setSpacing(10)  # Вертикальный отступ между виджетами
@@ -71,6 +75,7 @@ class TypeRSA(QWidget):
                     "Минимальное значение РЛИ": 0,
                     "Максимальное значение РЛИ": 0,
                     "Коэффициент сигнал/фон": 0,
+                    "Абсолютное среднее значение фона": 0,
                     "Значение фона в дБ": 0}
         
         # Вставляем значения словаря в параметры родителя
@@ -164,7 +169,9 @@ class ParameterDialog(QDialog):
             # Проверяем что значения являются числами
             if text != "":
                 text = text.replace(",", ".", 1)
-                if not text.replace(".", "", 1).isdigit():
+                try:
+                    text = float(text)
+                except:
                     self.parent_widget.parent_widget.msg.set_text(f'Не верный формат параметра "{self.list_param[i]}"', color = "r")
                     return
             else:

@@ -66,7 +66,7 @@ class ChKPBuider():
             Nd_ChKP = int(np.ceil((self.N1 + self.ndop_max + 2 * Mdop) / 2)) * 2
             Nd_ChKP = int(np.ceil(Nd_ChKP / 2)) * 2
             # Создание комплексного массива Rgg_ChKP нулей размера (Nd_ChKP, QR)
-            Rgg_ChKP = np.zeros((Nd_ChKP, self.RSA_param.QR), dtype=np.complex128)
+            Rgg_ChKP = np.zeros((Nd_ChKP, self.RSA_param.QR), dtype=np.complex64)
             # Создание массива ndop нулей размера QR для хранения индексов
             #ndop = np.zeros(self.RSA_param.QR, dtype=int)
             
@@ -79,8 +79,8 @@ class ChKPBuider():
 
             # Вычисление значений массива ndop и заполнение массивов Imp и U_sl
             for i in range(self.RSA_param.QR):
-                U_sl = np.zeros((Nd_ChKP,1), dtype=complex)
-                Imp = np.zeros((Nd_ChKP,1), dtype=complex)
+                U_sl = np.zeros((Nd_ChKP,1), dtype=np.complex64)
+                Imp = np.zeros((Nd_ChKP,1), dtype=np.complex64)
                 z = Imp0[:,i].reshape((-1,1))
                 Imp[ndop[i] + Mdop:ndop[i] + Mdop + self.N1] = z
                 qq = i // Nd_x
@@ -89,10 +89,11 @@ class ChKPBuider():
                 Rgg_ChKP[:, i] = (Imp * U_sl).ravel()
 
             Rgg_ChKP *= Chkp_power
+
             # Получение размеров Y0 и X0 массива Rgg_ChKP
             Y0, X0 = Rgg_ChKP.shape
                     
-            Rgg_ChKP2 = np.zeros((self.RSA_param.power_two, X0), dtype=np.complex128)
+            Rgg_ChKP2 = np.zeros((self.RSA_param.power_two, X0), dtype=np.complex64)
             # Rgg_ChKP2[ChKP_location_y:Y0 + ChKP_location_y, :] = Rgg_ChKP
             start_index = max(0, ChKP_location_y - Y0//2)
             end_index = min(start_index + Y0, self.RSA_param.power_two)

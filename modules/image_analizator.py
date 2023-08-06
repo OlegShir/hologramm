@@ -55,6 +55,7 @@ class ImageAnalizator(QGraphicsView):
         self.brightness_value = 1.0
         self.contrast_value = 1.0
         self.exp_value = 1.0
+        self.resetTransform()
         
         self.setEnabled(False)
 
@@ -67,6 +68,7 @@ class ImageAnalizator(QGraphicsView):
         if len(self.graphics_scene.items()):
             for item in self.graphics_scene.items():
                 self.graphics_scene.removeItem(item)
+        
         self.pixmap_item = QGraphicsPixmapItem()
         self.graphics_scene.addItem(self.pixmap_item)
 
@@ -74,9 +76,10 @@ class ImageAnalizator(QGraphicsView):
         self.table = table
         self.msg = msg
     
-    def set_coef_px_to_meters(self, coef_px_to_meters: list) -> None:
+    def set_coef_px_to_meters(self, coef_px_to_meters: list, coef_px_to_count:list) -> None:
         # получение коэффициента перевода пикселей в метры
         self.coef_px_to_meters, _ = coef_px_to_meters
+        self.coef_px_to_count = coef_px_to_count
     
     def wheelEvent(self, event):
         # Handle mouse wheel event for zooming
@@ -210,6 +213,16 @@ class ImageAnalizator(QGraphicsView):
         return max(x_ratio, y_ratio), min(1/x_ratio, 1/y_ratio)
    
     def open_file(self, path_to_img):
+        self.resetTransform()
+        self.scale_factor = 1
+        self.scale(self.scale_factor, self.scale_factor)
+        self.star_ruler = False
+        self.ruler_clear()
+
+        self.parent_widget.ampl_char.ruler.setChecked(False)
+
+        self.horizontalScrollBar().setValue(0)
+        self.verticalScrollBar().setValue(0)
         # открытие изображения
         self.image = Image.open(path_to_img)
         # Преобразование изображения в режим "L" (градации серого)

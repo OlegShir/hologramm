@@ -10,6 +10,8 @@ class ImageView(QGraphicsView):
     def __init__(self, parent=None):
         super(ImageView, self).__init__(parent)
 
+        self.parent_widget = parent
+
         self.graphics_scene = QGraphicsScene(self)
 
         self.setScene(self.graphics_scene)
@@ -23,7 +25,7 @@ class ImageView(QGraphicsView):
         # инициализация ссылки на мессенджер
         self.msg: MSGLabel
         # инициализация работы с метками ЧКП
-        self.Chkp_pixmap = QPixmap("qt_forms/resources/icon.png")
+        self.Chkp_pixmap = QPixmap(":/ico/qt_forms/resources/icon.png")
         self.xsize_Chkp_pixmap:int = self.Chkp_pixmap.width()
         self.ysize_Chkp_pixmap: int = self.Chkp_pixmap.height()
 
@@ -40,19 +42,9 @@ class ImageView(QGraphicsView):
         self.label_x: QLabel
         self.label_y: QLabel
 
-        # переменные для формирования квадрата для области фона
-        self.fon_rect = QGraphicsRectItem()
-        self.fon_rect_size = 200
-        self.fon_rect.setRect(0,0,self.fon_rect_size, self.fon_rect_size)
-        # Настройка стиля квадрата (зеленая граница, без заливки)
-        pen = self.fon_rect.pen()
-        pen.setColor(Qt.green) # type: ignore
-        pen.setWidth(2)
-        self.fon_rect.setPen(pen)
-        self.fon_rect.setBrush(QBrush()) # type: ignore
 
     def set_init(self) -> None:
-        
+        self.resetTransform()        
         self.setEnabled(False)
         # Инициализация работы с измерением фона
         self.star_fon_select:bool = False
@@ -67,8 +59,27 @@ class ImageView(QGraphicsView):
                 self.graphics_scene.removeItem(item)
         self.pixmap_item = QGraphicsPixmapItem()
         self.graphics_scene.addItem(self.pixmap_item)
+        if hasattr(self, 'fon_rect'):
+            if self.fon_rect in self.graphics_scene.items():
+                self.graphics_scene.removeItem(self.fon_rect)
 
-        
+    def add_fon_rect(self, size_fon_rect):
+        if hasattr(self, 'fon_rect'):
+            if self.fon_rect in self.graphics_scene.items():
+                self.graphics_scene.removeItem(self.fon_rect)
+        # переменные для формирования квадрата для области фона
+        self.fon_rect = QGraphicsRectItem()
+        self.fon_rect_size = size_fon_rect
+        self.fon_rect.setRect(0,0,self.fon_rect_size, self.fon_rect_size)
+        # Настройка стиля квадрата (зеленая граница, без заливки)
+        pen = self.fon_rect.pen()
+        pen.setColor(Qt.green) # type: ignore
+        pen.setWidth(2)
+        self.fon_rect.setPen(pen)
+        self.fon_rect.setBrush(QBrush()) # type: ignore
+
+
+
 
     def set_link(self, table, msg, label_x, label_y):
         self.label_x = label_x
@@ -182,9 +193,11 @@ class ImageView(QGraphicsView):
                     # получаем элемент на который нажали
                     item = self.graphics_scene.itemAt(item_pos, self.transform())
                     # если это ЧКП
-                    if item in self.labels:
+                    if item in self.table.Chkp_index_list:
                         # поиск и удаление
                         self.graphics_scene.removeItem(item)
+                        row = self.table.Chkp_index_list.index(item)
+                        self.table.table.removeRow(row)
                         self.table.Chkp_index_list.remove(item)
 
         super(ImageView, self).mouseReleaseEvent(event)
@@ -226,7 +239,7 @@ class ImageView(QGraphicsView):
         """получение размеров изображения в пикселях и 
            получение области видимости ROI_px вида [x0, y0, wight, height] в отсчетах"""
         # Получение видимой области QGraphicsView в координатах сцены
-        visible_rect = self.mapToScene(self.viewport().rect())
+        visible_rect = self.mapToScene(self.viewport().rect()) # type: ignore
 
         # Определение видимой области в пикселях
         rect = visible_rect.boundingRect()
@@ -245,8 +258,8 @@ class ImageView(QGraphicsView):
     def get_ROI_fon_in_count(self, count_resize):
 
         fon_rect_pos = [self.fon_rect.pos().x(),
-                         self.fon_rect.pos().x(),
-                         self.fon_rect.rect().width()*15*count_resize, # Чтобы можно было свернуть
+                         self.fon_rect.pos().y(),
+                         self.fon_rect.rect().width(), # Чтобы можно было свернуть
                          self.fon_rect.rect().height(),]
         
         ROI_fon_in_count = self.get_ROI_in_count(fon_rect_pos)

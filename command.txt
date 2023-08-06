@@ -1,5 +1,7 @@
 pyrcc5 resources.qrc -o resources.py
 
+pyuic5 qt_forms/qt_main_new2.ui > qt_forms/form.py 
+
 
 Import-Module Hyper-V
 Add-VMSharedFolder -VMName "WIN7SP1" -Name "SharedFolder" -Path "C:\ShareFolder" -ReadOnly $false
