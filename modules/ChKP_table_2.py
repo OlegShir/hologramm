@@ -204,17 +204,22 @@ class ChkpTable_2(QWidget):
                     elif column == 1:
                         value = round(int(item.text())*self.image_viewer.coef_px_to_count[1])
                     elif column == 2:
-                        count_value = (self.parent_widget.RSA_param.get("Коэффициент сжатия", 0) * 600)**2
+                        chkp_fon = self.parent_widget.RSA_param.get("Коэффициент сигнал/фон", 0)
+                        # отношение по Х
+                        x_value = int(self.table.item(row, 3).text())//50
+                        # отношение по Х
+                        y_value = int(self.table.item(row, 3).text())//50
+                        # среднее 
+                        mean = int((x_value+y_value)//2)
+                        dop = 0.3*(mean * 0.7)
+                        # когда указаны разы
                         if not self.slider.value():
-                            chkp_fon = self.parent_widget.RSA_param.get("Коэффициент сигнал/фон", 0)
-                            with open('t.txt', 'r') as file:
-                                dop = float(file.readline().strip())  # Читаем первую строку и преобразуем в число с плавающей точкой
                             value = (float(item.text())/chkp_fon)*dop
-                            # value = float(item.text())*chkp_fon*((int(self.table.item(row, 3).text())*int(self.table.item(row, 4).text()))/count_value*self.image_viewer.coef_px_to_meters[0])
+                        # когда указаны метры
                         else:
                             fon_DB = self.parent_widget.RSA_param.get("Значение фона в дБ", 0)
                             Kp = float(item.text())/(10**(fon_DB/10))
-                            value = Kp/(count_value/(int(self.table.item(row, 3).text())*int(self.table.item(row,4).text())))
+                            value = Kp*dop
                     else:
                         value = int(item.text())
                     data_ChKp.append(value)
