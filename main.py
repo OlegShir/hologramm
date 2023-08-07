@@ -227,37 +227,36 @@ class MainForm(QtWidgets.QMainWindow):
         ave_ChKP = RLI.azimuth_convolution_ChKP() 
         
                                                                                               
-        Chkp = []
-        i_count = []
-        for i in range(0,50,1):
-            RLI = Convolution(self.RSA_param, self.file_path_prj, self.file_name, self.RSA_name, ROI=ROI, count_fon=str(i), fon=True, ChKP_param=[[ROI[0]-ROI[2],
-                                                                                                                                                ROI[1]+ROI[3]//2, 
-                                                                                                                                                i, 
-                                                                                                                                                size_ChKP, 
-                                                                                                                                                size_ChKP]])
+        # Chkp = []
+        # i_count = []
+        # for i in range(0,50,1):
+        #     RLI = Convolution(self.RSA_param, self.file_path_prj, self.file_name, self.RSA_name, ROI=ROI, count_fon=str(i), fon=True, ChKP_param=[[ROI[0]-ROI[2],
+        #                                                                                                                                         ROI[1]+ROI[3]//2, 
+        #                                                                                                                                         i, 
+        #                                                                                                                                         size_ChKP, 
+        #                                                                                                                                         size_ChKP]])
         
-            RLI.range_convolution_ChKP()
-            ave_ChKP = RLI.azimuth_convolution_ChKP()
-            Chkp.append(ave_ChKP)
-            i_count.append(i)
-        Chkp_fon = [x/ave_fon for x in Chkp]   
-        # Открываем файл для записи в режиме текста
-        with open('output.csv', 'w', newline='') as csvfile:
-            # Создаем объект writer для записи в файл
-            writer = csv.writer(csvfile)
+        #     RLI.range_convolution_ChKP()
+        #     ave_ChKP = RLI.azimuth_convolution_ChKP()
+        #     Chkp.append(ave_ChKP)
+        #     i_count.append(i)
+        # Chkp_fon = [x/ave_fon for x in Chkp]   
+        # # Открываем файл для записи в режиме текста
+        # with open('output.csv', 'w', newline='') as csvfile:
+        #     # Создаем объект writer для записи в файл
+        #     writer = csv.writer(csvfile)
     
-            # Записываем заголовок
-            writer.writerow(['List1', 'List2'])
+        #     # Записываем заголовок
+        #     writer.writerow(['List1', 'List2'])
 
-            # Записываем данные из двух списков в разные столбцы
-            for item1, item2 in zip(i_count, Chkp_fon):
-                writer.writerow([item1, item2])
-        print(Chkp_fon)
+        #     # Записываем данные из двух списков в разные столбцы
+        #     for item1, item2 in zip(i_count, Chkp_fon):
+        #         writer.writerow([item1, item2])
+        # print(Chkp_fon)
 
         # отношение сигнал/фон
         signal_fon = ave_ChKP/ave_fon # type: ignore
         # коэффициент перерасчета real_power = signal_fon/coef_signal_fon
-
         coef_signal_fon = round(signal_fon/real_power, 2)
         # Записываем значение в словарь и фаил JSON
         self.RSA_param["Коэффициент сигнал/фон"] = coef_signal_fon
