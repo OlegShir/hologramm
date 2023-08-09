@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QPushButton, QComboBox,QMessageBox, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
 from PyQt5.QtGui import QPixmap, QIcon, QFont
 from modules.file_manager import RSAKAWorker
+from modules.helper import help
 
 import resources
 
@@ -17,6 +18,7 @@ class RSAKABOX(QWidget):
 
         # Создание экземпляра виджетов
         self.Kp = QLabel("Kp = ", self.main_box)
+        self.Kp.setToolTip(help.get('Kp', ""))
         self.Kp.move(20,20)
         # Устанавливаем изображение
         pixmap = QPixmap(':/value/qt_forms/resources/Ksap.png')
@@ -52,6 +54,7 @@ class RSAKABOX(QWidget):
         
 
         self.Pg = QLabel("", self.main_box)
+        self.Pg.setToolTip(help.get('Pg', ""))
         # Устанавливаем изображение
         pixmap = QPixmap(':/value/qt_forms/resources/PGk.png')
         self.Pg.setPixmap(pixmap)
@@ -59,7 +62,7 @@ class RSAKABOX(QWidget):
         self.Pg_value = QLabel("", self.main_box)
         self.Pg_value.setFont(font)
         self.Pg_value.setFixedSize(150,20)
-        self.Pg_value.move(65,191)
+        self.Pg_value.move(85,191)
         
         # Добавление действий
         self.Kp_value.textChanged.connect(self.on_Kp_changed)
@@ -135,13 +138,14 @@ class RSAKABOX(QWidget):
         # Распаковка параметров
         pulse_power, KND_antenna, observation_range, size_antenna_long, size_antenna_trans, \
         effective_area_antenna, illuminated_section, pulse_duration = param_RSA
+        KND_antenna = 10**(float(KND_antenna)/10)
 
-        Pf = (pulse_power*KND_antenna*fon_value*3e8*pulse_duration*illuminated_section)/(8*3.1415*(observation_range**2))
+        Pf = (pulse_power*KND_antenna*fon_value*3e8*pulse_duration*illuminated_section*effective_area_antenna)/(2*(4*3.1415*(observation_range**2))**2)
         PG = 0
         for i in range(len(ChKP_params)):
-            PG = (Kp*Pf*4*3.1415*(observation_range**2)*2*ChKP_params[i][3]*ChKP_params[i][4])/(effective_area_antenna*3e8*pulse_duration*illuminated_section)
+            PG += (Kp*Pf*4*3.1415*(observation_range**2)*2*ChKP_params[i][3]*ChKP_params[i][4])/(effective_area_antenna*3e8*pulse_duration*illuminated_section)
         
-        self.Pg_value.setText(f"{round(PG/1000, 3)} кВт.")  
+        self.Pg_value.setText(f"{round(PG, 3)} Вт.")  
         # получаем параметры выбранного РСА КА
         
         

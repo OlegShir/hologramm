@@ -271,8 +271,8 @@ class ImageAnalizator(QGraphicsView):
             # Рисуем линию между двумя точками
             self.line_item.setLine(QLineF(self.point1_item.pos(), self.point2_item.pos()))
             # Вычисляем и отображаем расстояние между точками
-            distance = self.calculate_distance(self.point1_item.pos(), self.point2_item.pos())
-            self.distance_text_item.setPlainText(f"{distance:.2f} м.")
+            self.distance = self.calculate_distance(self.point1_item.pos(), self.point2_item.pos())
+            self.distance_text_item.setPlainText(f"{self.distance:.2f} м.")
             self.distance_text_item.setPos(self.point2_item.pos())
         if update_size:
             # Установка толщины линии

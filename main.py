@@ -1,5 +1,6 @@
 import sys, csv
 import os.path, os
+import matplotlib.pyplot as plt
 from PyQt5.QtCore import QRect
 from PyQt5.QtWidgets import QLabel, QHBoxLayout, QWidget, QFrame, QTabWidget, QPushButton
 from PyQt5 import QtWidgets
@@ -86,11 +87,13 @@ class MainForm(QtWidgets.QMainWindow):
         # кнопка "Вывести РЛИ"   
         self.get_RLI = QPushButton("Вывести РЛИ", self)
         self.get_RLI.setGeometry(20, 556, 170, 30)
+        self.get_RLI.setToolTip(help.get('get_RLI', ""))
         # нажатие "Вывести РЛИ"
         self.get_RLI.clicked.connect(self.getting_RLI)
 
         # кнопка "Сохранить РЛИ"   
         self.save_full_RLI = QPushButton("Сохранить РЛИ", self)
+        self.save_full_RLI.setToolTip(help.get('save_full_RLI', ""))
         self.save_full_RLI.setGeometry(20, 593, 170, 30)
         # нажатие "Сохранить РЛИ "
         self.save_full_RLI.clicked.connect(self.saving_img_RSA)
@@ -336,6 +339,15 @@ class MainForm(QtWidgets.QMainWindow):
     
     def saving_img_RSA(self) -> None:
         self.image_view.save_image()
+
+    def closeEvent(self, event):
+        plt.close('all')  # Закрыть все окна Matplotlib при закрытии PyQt5 окна
+        remove_files = [f'{self.file_path_prj}/{self.file_name}_ROI.png',
+                        f'{self.file_path_prj}/{self.file_name}_ROI.npy']
+        for file in remove_files:
+            if os.path.exists(file):
+                os.remove(file)
+        event.accept()
 
 
 if __name__ == "__main__":

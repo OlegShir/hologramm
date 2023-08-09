@@ -206,11 +206,11 @@ class ChkpTable_2(QWidget):
                     elif column == 2:
                         chkp_fon = self.parent_widget.RSA_param.get("Коэффициент сигнал/фон", 0)
                         # отношение по Х
-                        x_value = int(self.table.item(row, 3).text())//50
+                        x_value = int(self.table.item(row, 3).text())/50
                         # отношение по Х
-                        y_value = int(self.table.item(row, 3).text())//50
+                        y_value = int(self.table.item(row, 3).text())/50
                         # среднее 
-                        mean = int((x_value+y_value)//2)
+                        mean = (x_value+y_value)/2
                         dop = 0.3*(mean * 0.7)
                         # когда указаны разы
                         if not self.slider.value():
@@ -223,6 +223,7 @@ class ChkpTable_2(QWidget):
                     else:
                         value = int(item.text())
                     data_ChKp.append(value)
+                data_ChKp[3], data_ChKp[4] = data_ChKp[4], data_ChKp[3]
                 data_ChKps.append(data_ChKp)
 
         return data_ChKps

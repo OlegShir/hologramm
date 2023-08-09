@@ -146,10 +146,10 @@ class AmplChar(QWidget):
         if not self.image_analizator.ruler:
             self.parent_widget.msg.set_text("Линия не установлена", color = 'r')
         if self.image_analizator.ruler:
-                with Halo(text='Расчет амплитудных значений', spinner="dots2",  placement='right', color="white", ):
-                    GraphAmplitudeValue(self.image_analizator.point1_item.pos().toPoint(),
-                                        self.image_analizator.point2_item.pos().toPoint(),
-                                        self.image_analizator.coef_px_to_count,
-                                        self.image_analizator.coef_px_to_meters,
-                                        self.parent_widget.RSA_param.get("Абсолютное среднее значение фона",0),
-                                        f"{self.parent_widget.file_path_prj}/{self.parent_widget.file_name}_ROI.npy")
+                
+                GraphAmplitudeValue(self.image_analizator.point1_item.pos().toPoint(),
+                                    self.image_analizator.point2_item.pos().toPoint(),
+                                    self.image_analizator.coef_px_to_count,
+                                    self.image_analizator.distance,
+                                    self.parent_widget.RSA_param.get("Абсолютное среднее значение фона",0),
+                                    f"{self.parent_widget.file_path_prj}/{self.parent_widget.file_name}_ROI.npy")

@@ -4,7 +4,7 @@ from PyQt5.QtGui import QPixmap, QIcon
 from modules.helper import help
 from modules.image_viewer import ImageView
 
-
+import resources
 
 class FonParam(QGroupBox):
     def __init__(self, parent_widget):
@@ -22,11 +22,13 @@ class FonParam(QGroupBox):
         self.fon_refresh = QPushButton(self)
         self.fon_refresh.setFixedSize(30,30)
         pixmap = QPixmap(':/btn/qt_forms/resources/refresh.png')
+        self.fon_refresh.setToolTip(help.get('fon_refresh', ""))
         self.fon_refresh.setIcon(QIcon(pixmap))
         self.fon_refresh.setIconSize(QSize(24,24))
         self.fon_refresh.move(200, 15)
 
         self.btn_select_fon = QPushButton("Выбрать область фона", self)
+        self.btn_select_fon.setToolTip(help.get('btn_select_fon', ""))
         self.btn_select_fon.setFixedSize(140,20)
         self.btn_select_fon.move(10, 60)
 
@@ -40,6 +42,7 @@ class FonParam(QGroupBox):
         DB_label.move(220, 60)
 
         self.btn_solve_fon = QPushButton("Рассчитать значения фона", self)
+        self.btn_solve_fon.setToolTip(help.get('btn_solve_fon', ""))
         self.btn_solve_fon.setFixedSize(200,20)
         self.btn_solve_fon.move(10, 90)
 
@@ -99,8 +102,11 @@ class FonParam(QGroupBox):
             status = True
         else:
             # Отжата
-            status = False            
-       
+            status = False
+            self.btn_select_fon.setChecked(False)
+            if self.image_viewer.fon_rect in self.image_viewer.graphics_scene.items():
+                self.image_viewer.graphics_scene.removeItem(self.image_viewer.fon_rect)
+
         self.btn_select_fon.setEnabled(status)
         self.btn_solve_fon.setEnabled(status)
         self.fon_DB.setEnabled(status)
@@ -138,6 +144,7 @@ class FonParam(QGroupBox):
         else:
             # Отжата            
             self.image_viewer.star_fon_select  = False
+            self.image_viewer.graphics_scene.removeItem(self.image_viewer.fon_rect)
 
     def btn_solve_fon_clicked(self) -> None:
         # Проверяем что метка фона поставлена на изображении

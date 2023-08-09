@@ -337,22 +337,22 @@ class Convolution():
             # Случай когда изображение формируется впервые
             if not self.quantiles:
                 self.min_value_px = np.min(amplitude_values)
-                self.RSA_param["Минимальное значение РЛИ"] = int(self.min_value_px)
+                self.RSA_param["Минимальное значение РЛИ"] = int(self.min_value_px) # type: ignore
                 self.max_value_px = np.max(amplitude_values)
-                self.RSA_param["Максимальное значение РЛИ"] = int(self.max_value_px)
+                self.RSA_param["Максимальное значение РЛИ"] = int(self.max_value_px) # type: ignore
                 # Найдем квантиль 97% (0.97) массива
-                self.quantiles = np.quantile(sorted_values, 0.97)
+                self.quantiles = np.quantile(sorted_values, 0.97) # type: ignore
                 self.RSA_param["Значение квантиля"] = self.quantiles
             
             # Вычислим диапазон значений, попадающих в исходный диапазон [2 * quantiles, max_value_px]
-            values_in_original_range = sorted_values[(sorted_values >= 2 * self.quantiles) & (sorted_values <= self.max_value_px)]
+            values_in_original_range = sorted_values[(sorted_values >= 2 * self.quantiles) & (sorted_values <= self.max_value_px)] # type: ignore
 
             # Приведем этот диапазон к диапазону quantiles
             new_range_min = self.quantiles
             new_range_max = 2 * self.quantiles
 
             # Масштабируем значения из исходного диапазона к новому диапазону
-            scaled_values = ((values_in_original_range - (2 * self.quantiles)) / (self.max_value_px - (2 * self.quantiles))) * (new_range_max - new_range_min) + new_range_min
+            scaled_values = ((values_in_original_range - (2 * self.quantiles)) / (self.max_value_px - (2 * self.quantiles))) * (new_range_max - new_range_min) + new_range_min # type: ignore
 
             # Обновим значения в массиве
             amplitude_values[(amplitude_values >= 2 * self.quantiles) & (amplitude_values <= self.max_value_px)] = scaled_values

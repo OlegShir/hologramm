@@ -1,14 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from PyQt5.QtCore import QPoint
+from PyQt5.QtGui import QPixmap, QIcon
 
+import resources
 
 class GraphAmplitudeValue:
     def __init__(self, 
                  start_point: QPoint,
                  end_point: QPoint, 
                  coef_px_to_count:list, 
-                 coef_px_to_meter:float,
+                 count_meter:float,
                  fon_value: float,
                  path_to_np: str) -> None:
         
@@ -19,6 +21,7 @@ class GraphAmplitudeValue:
         self.path_to_np = path_to_np
     
         self.fon_value = fon_value
+        self.count_meter = count_meter
 
         self.solve()
 
@@ -65,27 +68,67 @@ class GraphAmplitudeValue:
         return ampl_values
 
     def get_graph(self, ampl_values):
+
         # Создайте ось x, представляющую позиции вдоль линии (индексы пикселей)
         x_axis = np.arange(len(ampl_values))
-
         # Преобразуйте список 'ampl_values_along_line' в массив NumPy для построения графика
         ampl_values_np = np.array(ampl_values)
+        # Сглаживание графика с помощью скользящего среднего
+        if len(ampl_values)>100:
+            window_size = len(ampl_values)//100
+            ampl_values_np = np.convolve(ampl_values_np, np.ones(window_size)/window_size, mode='same')
+
+
         mean_array = np.mean(ampl_values_np).astype(float)
+
+        plt.ion()
+
+        plt.figure(num='Амплитудные характеристики изображения', dpi=80, facecolor='w', edgecolor='k', tight_layout=True)
+        plt.clf()  # Очистить предыдущий график
+
+        # редактирование значков
+        toolbar = plt.get_current_fig_manager().toolbar # type: ignore
+        unwanted_buttons = ["Home", "Back", "Forward", "Pan", "Zoom", "Subplots", "Customize"]
+
+        for x in toolbar.actions():
+            if x.text() == "Save":
+                x.setToolTip("Сохранить график")
+            if x.text() in unwanted_buttons:
+                toolbar.removeAction(x)
+
+        # установка иконки
+        pixmap = QPixmap(':/ico/qt_forms/resources/icon.png')
+        plt.get_current_fig_manager().window.setWindowIcon(QIcon(pixmap)) # type: ignore
 
         # Постройте значения пикселей в виде графика
         plt.plot(x_axis, ampl_values_np)
 
+        # Максимальное значение новой метки
+        max_new_tick = self.count_meter
+
+        # Генерация равномерных меток
+        num_ticks = 10  # Количество меток, включая начальное и конечное значение
+        new_xticks = np.linspace(0, max_new_tick, num_ticks)
+        old_xticks = np.linspace(0, len(ampl_values), num_ticks)
+        new_xtick_labels = [str(int(value)) for value in new_xticks]  # Преобразование в строку
+
+        # Установка новых меток на оси X
+        plt.xticks(old_xticks, new_xtick_labels)
+
         # Настройте внешний вид графика (при необходимости)
-        plt.xlabel('Позиция вдоль линии')
-        plt.ylabel('Амплитудные значения')
+        plt.xlabel('Расстояние, м.')
+        plt.ylabel('Абсолютные амплитудные значения')
         plt.grid(True)
         
         # Добавляем горизонтальную линию фона
-        plt.axhline(self.fon_value, color='red')
-        plt.axhline(mean_array, color='black')
-
+        plt.axhline(self.fon_value, color='red', label='Среднее значение фона')
+        plt.axhline(mean_array, color='black', label='Среднее значение графика')
+        # Добавляем легенду
+        plt.legend()
         # Отобразите график
         plt.show()
+
+
 
 
 
