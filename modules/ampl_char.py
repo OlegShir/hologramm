@@ -104,6 +104,8 @@ class AmplChar(QWidget):
         self.last_mask_value = 0
         self.mask_value.setText(str(self.last_mask_value))
         self.mask_slider.setValue(self.last_mask_value)
+        self.count_label.setText('')
+        self.mean_label.setText('')
 
     def on_text_changed(self, text:str) -> None:
         if text == '':
@@ -151,5 +153,6 @@ class AmplChar(QWidget):
                                     self.image_analizator.point2_item.pos().toPoint(),
                                     self.image_analizator.coef_px_to_count,
                                     self.image_analizator.distance,
-                                    self.parent_widget.RSA_param.get("Абсолютное среднее значение фона",0),
-                                    f"{self.parent_widget.file_path_prj}/{self.parent_widget.file_name}_ROI.npy")
+                                    f"{self.parent_widget.file_path_prj}/{self.parent_widget.file_name}_ROI.npy",
+                                    fon_value=self.parent_widget.RSA_param.get("Абсолютное среднее значение фона",0),
+                                    )

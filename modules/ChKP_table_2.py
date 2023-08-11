@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QGraphicsView, QWidget, QPushButton, QTableWidget, QTableWidgetItem, QLabel, QSlider
-from PyQt5.QtCore import Qt, QPoint, QPointF
-from PyQt5.QtGui import QPainter, QPixmap, QIcon
+from PyQt5.QtCore import Qt, QPointF
+from PyQt5.QtGui import  QPixmap, QIcon
 from modules.massager import MSGLabel
 from PyQt5.QtWidgets import QGraphicsView
 import resources
@@ -52,7 +52,7 @@ class ChkpTable_2(QWidget):
 
         for col in range(column_count):
             self.table.setColumnWidth(col, int(column_width))
-
+            
         # Виджеты для выбора типа интенсивностей
         title = QLabel("Интенсивность:", self)
         title.move(11,208)
@@ -66,6 +66,7 @@ class ChkpTable_2(QWidget):
         self.slider.setValue(0)
         self.slider.setTickInterval(1)  # Отображаем риски только для значений 0 и 1
         self.var2 = QLabel("метр квадратный", self)
+        self.var2.setFixedWidth(130)
         self.var2.move(230,208)
 
         # создаем хранилище индексов ЧКП
@@ -165,7 +166,7 @@ class ChkpTable_2(QWidget):
                     float(item)
                     return
                 
-                val = int(item)
+                val = int(float(item))
                 # если изменяются первая и вторая колонка
                 if column == 0 or column == 1:
                     current_pos = label.pos()  # Текущая позиция метки
@@ -173,21 +174,25 @@ class ChkpTable_2(QWidget):
                     if column == 0: 
                         # Получение текущего размера метки
                         size_x = label.boundingRect().width()
+                        if val+size_x > self.image_viewer.width_image or val-size_x < 0:
+                            raise ValueError
                         new_pos.setX(val-size_x/2)  # Изменяем только координату X
                     else:
                         # Получение текущего размера метки
                         size_y = label.boundingRect().height()
+                        if val+size_y > self.image_viewer.height_image or val-size_y < 0:
+                            raise ValueError
                         new_pos.setY(val-size_y/2)  # Изменяем только координату Y
                     label.setPos(new_pos) # устанавливаем новую позицию
 
             except ValueError:
                 # В ячейке введен некорректный формат данных
                 self.table.blockSignals(True)  # Блокировка сигналов, чтобы избежать рекурсии
-                self.setItem(row, column, QTableWidgetItem(''))  # Установка пустого значения
+                self.table.setItem(row, column, QTableWidgetItem(''))  # Установка пустого значения
                 self.table.blockSignals(False)  # Разблокировка сигналов
                 self.msg.set_text(f'Введен некорректный формат данных', color = 'r')
                 
-    def data_collector(self):
+    def data_collector(self, for_PG = False):
         data_ChKps = []
         if self.table.rowCount() != -1:
             for row in range(self.table.rowCount()):
@@ -195,33 +200,40 @@ class ChkpTable_2(QWidget):
                 # тут путаница со столбцами
                 for column in range(self.table.columnCount()):
                     item = self.table.item(row, column)
-                    if item is None or not item.text():
+                    item_text = item.text().replace(',','.')
+                    if item is None or not item_text:
                         self.msg.set_text(f'Введены не все данные для ЧКП №{row+1}')
                         return False
                     # тут производится пересчет положения ЧКП из пикселей в отсчеты
                     if column == 0:
-                        value = round(int(item.text())*self.image_viewer.coef_px_to_count[0])
+                        value = int(float(item_text)*self.image_viewer.coef_px_to_count[0])
                     elif column == 1:
-                        value = round(int(item.text())*self.image_viewer.coef_px_to_count[1])
+                        value = int(float(item_text)*self.image_viewer.coef_px_to_count[1])
                     elif column == 2:
-                        chkp_fon = self.parent_widget.RSA_param.get("Коэффициент сигнал/фон", 0)
-                        # отношение по Х
-                        x_value = int(self.table.item(row, 3).text())/50
-                        # отношение по Х
-                        y_value = int(self.table.item(row, 3).text())/50
-                        # среднее 
-                        mean = (x_value+y_value)/2
-                        dop = 0.3*(mean * 0.7)
-                        # когда указаны разы
-                        if not self.slider.value():
-                            value = (float(item.text())/chkp_fon)*dop
-                        # когда указаны метры
+                        fon_DB = self.parent_widget.RSA_param.get("Значение фона в дБ", 0)
+                        if not for_PG:
+                            chkp_fon = self.parent_widget.RSA_param.get("Коэффициент сигнал/фон", 0)
+                            # отношение по Х
+                            x_value = float(self.table.item(row, 3).text().replace(',','.'))/50
+                            # отношение по Х
+                            y_value = float(self.table.item(row, 4).text().replace(',','.'))/50
+                            # среднее 
+                            mean = (x_value+y_value)/2
+                            dop = 0.3*(mean * 0.7)
+                            # когда указаны разы
+                            if not self.slider.value():
+                                value = (float(item_text)/chkp_fon)*dop
+                            # когда указаны метры
+                            else:
+                                Kp = float(item_text)/(10**(fon_DB/10))
+                                value = Kp*dop
                         else:
-                            fon_DB = self.parent_widget.RSA_param.get("Значение фона в дБ", 0)
-                            Kp = float(item.text())/(10**(fon_DB/10))
-                            value = Kp*dop
+                            if not self.slider.value():
+                                value = float(item_text)
+                            else:
+                                value = float(item_text)/(10**(fon_DB/10))
                     else:
-                        value = int(item.text())
+                        value = int(float(item_text))
                     data_ChKp.append(value)
                 data_ChKp[3], data_ChKp[4] = data_ChKp[4], data_ChKp[3]
                 data_ChKps.append(data_ChKp)

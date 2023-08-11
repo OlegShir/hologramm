@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QPushButton, QComboBox,QMessageBox, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
 from PyQt5.QtGui import QPixmap, QIcon, QFont
+from PyQt5.QtCore import Qt
 from modules.file_manager import RSAKAWorker
 from modules.helper import help
 
@@ -12,60 +13,39 @@ class RSAKABOX(QWidget):
 
         self.setFixedSize(191, 215)
 
-        self.main_box = QGroupBox("Мощность САП для КА", self)
-        self.main_box.setFixedSize(191, 231)
+        self.main_box = QGroupBox("Мощность САП для РСА КА", self)
+        self.main_box.setFixedSize(191, 215)
 
-
-        # Создание экземпляра виджетов
-        self.Kp = QLabel("Kp = ", self.main_box)
-        self.Kp.setToolTip(help.get('Kp', ""))
-        self.Kp.move(20,20)
-        # Устанавливаем изображение
-        pixmap = QPixmap(':/value/qt_forms/resources/Ksap.png')
-        self.Kp.setPixmap(pixmap)
-        #self.Kp.setIconSize(QSize(24,24))
-        self.Kp_value = QLineEdit("", self.main_box)
-        self.Kp_value.setFixedSize(40, 20)
-        self.Kp_value.move(70,20)
-        font = QFont()
-        font.setPixelSize(12)
-        time_label = QLabel("раз", self.main_box)
-        time_label.setFont(font)
-
-        time_label.move(115,26)
 
         self.box = QGroupBox("Выбор космического РСА", self.main_box)
-        self.box.setFixedSize(170,95)
-        self.box.move(10, 50)
+        self.box.setFixedSize(170,85)
+        self.box.move(10, 20)
         layout_box = QVBoxLayout(self.box)
 
         self.type_RSA = QComboBox()
-        self.type_RSA.setFixedHeight(30)
+        self.type_RSA.setFixedHeight(25)
         self.btn_change_RSA = QPushButton("Изменить РСА")
-        self.btn_change_RSA.setFixedHeight(30)
+        self.btn_change_RSA.setFixedHeight(25)
 
         # Добавление виджетов в коробку
         layout_box.addWidget(self.type_RSA)
         layout_box.addWidget(self.btn_change_RSA)
 
         self.btn_solve = QPushButton("Провести оценку", self.main_box)
-        self.btn_solve.setFixedSize(150, 30)
-        self.btn_solve.move(20, 150)
-        
+        self.btn_solve.setFixedSize(150, 25)
+        self.btn_solve.move(20, 110)
 
         self.Pg = QLabel("", self.main_box)
-        self.Pg.setToolTip(help.get('Pg', ""))
-        # Устанавливаем изображение
-        pixmap = QPixmap(':/value/qt_forms/resources/PGk.png')
-        self.Pg.setPixmap(pixmap)
-        self.Pg.move(20, 190)
-        self.Pg_value = QLabel("", self.main_box)
-        self.Pg_value.setFont(font)
-        self.Pg_value.setFixedSize(150,20)
-        self.Pg_value.move(85,191)
+        font = QFont()
+        font.setPixelSize(12)
+        self.Pg.setTextInteractionFlags(Qt.TextSelectableByMouse)  # type: ignore # Установка атрибута для выделения и копирования текста
+        self.Pg.setFont(font)
+        self.Pg.setFixedSize(170, 80)
+        self.Pg.move(10, 140)
+
+
         
         # Добавление действий
-        self.Kp_value.textChanged.connect(self.on_Kp_changed)
         self.btn_change_RSA.clicked.connect(self.btn_change_RSA_clicked)
         self.btn_solve.clicked.connect(self.btn_solve_clicked)
 
@@ -81,8 +61,7 @@ class RSAKABOX(QWidget):
             self.type_RSA.setCurrentIndex(0)
 
     def set_init(self) -> None:
-        self.Kp_value.setText("")
-        self.Pg_value.setText("")
+        self.Pg.setText("")
         self.file_worker = RSAKAWorker("RSAKA.rsa")
         self.refresh_list_RSAKA() 
 
@@ -107,15 +86,6 @@ class RSAKABOX(QWidget):
 
     def btn_solve_clicked(self) -> None:
         """Расчет необходимой мощности РСК КА."""
-        # Проверяем введенное значение Kp
-        if self.Kp_value.text() == "":
-            self.parent_widget.msg.set_text("Не введено значение требуемого отношения помеха/фон", color = 'r')
-            return
-        try:
-            Kp = float(self.Kp_value.text())
-        except:
-            self.parent_widget.msg.set_text("Не верный формат значения требуемого отношения помеха/фон", color = 'r')
-            return
         # Проверяем, что установлено значение фона
         fon_value = self.parent_widget.fon_param.fon_DB.text()
         if fon_value == "":
@@ -128,11 +98,12 @@ class RSAKABOX(QWidget):
             return
         param_RSA = self.file_worker.read_param_RASKA(type_RSA)
         # получаем параметры ЧКП
-        ChKP_params = self.parent_widget.table_Chkp_2.data_collector()
+        ChKP_params = self.parent_widget.table_Chkp_2.data_collector(for_PG = True)
+        # проверяем на наличие всех параметров
         if not ChKP_params:
             self.parent_widget.msg.set_text("Отсутствуют параметры САП", color = 'r')
             return
-        # пересчитываем значение фона из дБ в разы
+          # пересчитываем значение фона из дБ в разы
         fon_value = 10**(float(fon_value)/10)
 
         # Распаковка параметров
@@ -141,14 +112,13 @@ class RSAKABOX(QWidget):
         KND_antenna = 10**(float(KND_antenna)/10)
 
         Pf = (pulse_power*KND_antenna*fon_value*3e8*pulse_duration*illuminated_section*effective_area_antenna)/(2*(4*3.1415*(observation_range**2))**2)
-        PG = 0
+        PG = 0.0
         for i in range(len(ChKP_params)):
-            PG += (Kp*Pf*4*3.1415*(observation_range**2)*2*ChKP_params[i][3]*ChKP_params[i][4])/(effective_area_antenna*3e8*pulse_duration*illuminated_section)
-        
-        self.Pg_value.setText(f"{round(PG, 3)} Вт.")  
-        # получаем параметры выбранного РСА КА
-        
-        
+            # добавляем очередное значение 
+            result = (ChKP_params[i][2]*Pf*4*3.1415*(observation_range**2)*2*ChKP_params[i][3]*ChKP_params[i][4])/(effective_area_antenna*3e8*pulse_duration*illuminated_section)
+            PG += round(result,3)
+        self.Pg.setText(f"<html>Требуемый энергопотенциал<br>САП составляет: <b>{PG} Вт.</b></html>")
+       
 
 class ParameterDialog(QDialog):
     def __init__(self, parent_widget):

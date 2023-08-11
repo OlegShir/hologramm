@@ -21,7 +21,7 @@ from modules.RSA_KA_box import RSAKABOX
 
 from modules.helper import help
 
-os.system('mode con: cols=100 lines=10')
+os.system('mode con: cols=130 lines=10')
 
 class MainForm(QtWidgets.QMainWindow):
     """Класс основного окна программы"""
@@ -158,17 +158,30 @@ class MainForm(QtWidgets.QMainWindow):
                 if not self.RSA_name in RSA:
                     self.msg.set_text("Изображение сформировано РСА, не входящим в программу")
                     return
-                # выставляем его в поле "Тип авиационного РСА"
-                self.type_RSA_widget.name_type_RSA.setText(self.RSA_name)
-                # активация кнопки "сохранение РЛ-изображения"
-                self.activate_gui(self.save_full_RLI,self.tabWidget2.widget(0))
-                # для правильного расчета метки масштаба в image_view необходимо передать значения коэффициентов пикселей в отсчеты и пикселей в метры, получаемые из dx, ndr и коэффициента сжатия изображение, получаемых из параметров РСА
-                coef_px_to_count, coef_px_to_meters = self.scale_factor_px_to_count_and_meters(self.RSA_param)
-                self.image_view.set_scale_factor_px_to_count_and_meters(coef_px_to_count, coef_px_to_meters)
-                # передаем коэффициент перевода из пикселей в метры в класс ImageAnalizator для расчета линейки
-                self.image_analizator.set_coef_px_to_meters(coef_px_to_meters, coef_px_to_count)
-                self.image_view.open_file(file_path)
-                self.fon_param.set_init_OK_param(self.RSA_param.get("Значение фона в дБ"))
+                try:
+                    # выставляем его в поле "Тип авиационного РСА"
+                    self.type_RSA_widget.name_type_RSA.setText(self.RSA_name)
+                    # для правильного расчета метки масштаба в image_view необходимо передать значения коэффициентов пикселей в отсчеты и пикселей в метры, получаемые из dx, ndr и коэффициента сжатия изображение, получаемых из параметров РСА
+                    coef_px_to_count, coef_px_to_meters = self.scale_factor_px_to_count_and_meters(self.RSA_param)
+                    self.image_view.set_scale_factor_px_to_count_and_meters(coef_px_to_count, coef_px_to_meters)
+                    # передаем коэффициент перевода из пикселей в метры в класс ImageAnalizator для расчета линейки
+                    self.image_analizator.set_coef_px_to_meters(coef_px_to_meters, coef_px_to_count)
+                    self.image_view.open_file(file_path)
+                except:
+                    self.msg.set_text("Ошибка в файле параметров", color= 'r')
+                # проверяем наличие параметров фона если кто-то поковырялся в json
+                try:
+                    val1 = int(float(self.RSA_param.get("Значение фона в дБ", 0)))
+                    val2 = int(float(self.RSA_param.get("Абсолютное среднее значение фона", 0)))
+                    val3 = int(float(self.RSA_param.get("Коэффициент сигнал/фон", 0)))
+                    if val1 == 0 or val2 == 0 or val3 == 0:
+                        raise Exception
+                    self.fon_param.set_init_OK_param(self.RSA_param.get("Значение фона в дБ"))
+                    # активация кнопки "сохранение РЛ-изображения"
+                    self.activate_gui(self.save_full_RLI,self.tabWidget2.widget(0))
+                except Exception:
+                    self.fon_param.set_init_NOT_param()              
+                
             elif file_type == 'rgg':
                 self.type_RSA_widget.btn_param.setEnabled(True)
             else:
@@ -178,10 +191,14 @@ class MainForm(QtWidgets.QMainWindow):
         """Функция полную свертку голограммы для получения РЛИ + создает фаил проекта"""
         # пошла свертка полной РГГ
         os.system("cls")
-        self.msg.set_text("Расчет РЛИ", color= 'y')
-        self.convolution = Convolution(self.RSA_param, f'{self.file_path_prj}', f'{self.file_name}', self.RSA_name)
-        self.convolution.range_convolution_ChKP()
-        self.convolution.azimuth_convolution_ChKP()
+        try:
+            self.msg.set_text("Расчет РЛИ", color= 'y')
+            self.convolution = Convolution(self.RSA_param, f'{self.file_path_prj}', f'{self.file_name}', self.RSA_name)
+            self.convolution.range_convolution_ChKP()
+            self.convolution.azimuth_convolution_ChKP()
+        except:
+            self.msg.set_text("Введенные параметры РСА не соответствуют РГГ", color='r')
+
         # Создание JSON файл проекта
         self.file_worker.project_json_writer(self.RSA_name, self.RSA_param)
         # для правильного расчета метки масштаба в image_view необходимо передать значения коэффициентов пикселей в отсчеты и пикселей в метры, получаемые из dx, ndr и коэффициента сжатия изображение, получаемых из параметров РСА
@@ -206,9 +223,8 @@ class MainForm(QtWidgets.QMainWindow):
             RLI.azimuth_convolution_ChKP()
             self.image_analizator.open_file(f'{self.file_path_prj}/{self.file_name}_ROI.png')
             self.activate_gui(self.tabWidget2.widget(1), self.tabWidget2.widget(2))
-        except Exception as e:
-            print(e)
-            self.msg.set_text("Количество отсчетов отличается от РСА", color='r')
+        except:
+            self.msg.set_text("Введенные параметры РСА не соответствуют РГГ", color='r')
         self.activate_gui(self.tabWidget2.widget(1), self.tabWidget2.widget(2))
 
     def solving_fon(self, ROI):

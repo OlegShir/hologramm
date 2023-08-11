@@ -39,6 +39,9 @@ class ImageView(QGraphicsView):
         self.coef_px_to_count: list
         self.coef_px_to_meters: list
 
+        self.width_image: int
+        self.height_image: int
+
         self.label_x: QLabel
         self.label_y: QLabel
 
@@ -62,6 +65,8 @@ class ImageView(QGraphicsView):
         if hasattr(self, 'fon_rect'):
             if self.fon_rect in self.graphics_scene.items():
                 self.graphics_scene.removeItem(self.fon_rect)
+        self.width_image = 0
+        self.height_image = 0
 
     def add_fon_rect(self, size_fon_rect):
         if hasattr(self, 'fon_rect'):
@@ -215,6 +220,8 @@ class ImageView(QGraphicsView):
     def open_file(self, path_to_img):
         # Загрузка изображения с помощью QPixmap
         image = QPixmap(path_to_img)
+        self.width_image = image.width()
+        self.height_image = image.height()
         # Установка изображения в ImageView
         self.pixmap_item.setPixmap(image)
 
@@ -227,6 +234,8 @@ class ImageView(QGraphicsView):
 
         # отображение метки масштаба
         self.update_scale_label_text()
+
+        # 
 
         # Создание пользовательского курсора в виде квадрата 100x100 пикселей
         # self.square_cursor = QCursor(QPixmap(100, 100))

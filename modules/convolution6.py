@@ -358,7 +358,7 @@ class Convolution():
             amplitude_values[(amplitude_values >= 2 * self.quantiles) & (amplitude_values <= self.max_value_px)] = scaled_values
 
             # Линейная нормализация значений                     
-            normalized_values = (amplitude_values - self.min_value_px) / (2*self.quantiles - self.min_value_px)
+            normalized_values = (amplitude_values - self.min_value_px) / (2*self.quantiles - self.min_value_px) # type: ignore
             # Преобразование в диапазон от 0 до 255
             scaled_data = (normalized_values * 255).astype(np.uint8)
 
@@ -406,10 +406,9 @@ if __name__ == '__main__':
     ChKP=[[8000, 4000, 100, 100, 100]]
 
 
-    sf = Convolution(param_RSA, "example", "example", "Компакт", ChKP_param=[])
-    sf.full_RGG_part()
-    # sf.range_convolution_ChKP()
-    # sf.azimuth_convolution_ChKP()
+    sf = Convolution(param_RSA, "example", "example", "Компакт", ChKP_param=[], ROI=[4000,4000,4000,2000])
+    sf.range_convolution_ChKP()
+    sf.azimuth_convolution_ChKP()
 
 
     # sf.azimuth_convolution_ChKP(ROI=[0, 2000, 20000, 2000], path_input_rpt="C:/Users/X/Desktop/185900/1_with_1ChKP.rpt")

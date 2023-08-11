@@ -1,5 +1,6 @@
 """Фаил содержит функции для работы с файлами"""
 import json, datetime, pickle, os.path
+from os import listdir
 
 class FileWorker():
     def __init__(self, path: str) -> None:
@@ -178,29 +179,52 @@ def project_json_writer(parent):
         # Запись данных в файл в формате JSON
         json.dump(data, file, ensure_ascii=False)
 
+class ServiceInfo():
+    """Класс предназначен для поиска параметров РСА в служебных файлах"""
+    def __init__(self, path_project: str) -> None:
+        
+        self.path_project = path_project
+        # Разрешение файлов, которые проверяются
+        self.desired_extension = ['._TAB', '._SAR']
+
+    def find_files(self):
+        pass
+
+    def view_TAB(self):
+        # Количество комплексных отсчетов - PULSE_LENGTH/2
+        # Количество зарегистрированных импульсов - PULSES
+        # Частота дискретизации АЦП - SAMP_FREQ
+        # Длина волны - LAMBDA
+        # Период повторения импульсов - 1/PULSE_REPETITION_FREQ
+        # Ширина спектра сигнала - BANDWIDTH
+        # Длительность импульса - !
+        # Скорость движения носителя - 
+
+
+
+
+        # Открываем файл для чтения
+        with open('your_file.txt', 'r') as file:
+            lines = file.readlines()
+
+        # Инициализируем пустой список для хранения данных
+        data_list = []
+
+        # Обходим каждую строку в файле
+        for line in lines:
+            # Разделяем строку на ключ и значение
+            key, value = line.strip().split('=')
+            # Добавляем ключ и значение в список как кортеж (tuple)
+            data_list.append((key, value))
+
+        # Выводим список с данными
+        for key, value in data_list:
+            print(f'{key}: {value}')
+
+
+
+
 if __name__ == "__main__":
     
 
-    def save_dict_to_file(dictionary, filename):
-        with open(filename, 'wb') as file:
-         pickle.dump(dictionary, file)
-
-    dict = {
-    "КА_1": [
-            9000.0,
-            40.8,
-            770000,
-            5.7,
-            1.4,
-            7.98,
-            10000.0,
-            0.00001           ]
-        }
-
-    save_dict_to_file(dict, "RSAKA.rsa")
-
-    work= RSAKAWorker("RSAKA.rsa")
-    
-    #print(work.write_RSAKA("КА_2", [9000, 121]))
-    #print(work.delete_RSAKA("КА_2"))
-    #print(work.read_type_RASKA())
+    t = ServiceInfo('')

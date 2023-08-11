@@ -151,7 +151,7 @@ class FonParam(QGroupBox):
         if self.image_viewer.fon_rect not in self.image_viewer.graphics_scene.items():
             self.parent_widget.msg.set_text("Не определена область фона", color = "r")
             return
-        if self.fon_DB.text() == "" or self.fon_DB.text() == "0":
+        if self.fon_DB.text() == "" or int(float(self.fon_DB.text())) == 0:
             self.parent_widget.msg.set_text("Не введено значение фона", color = "r")
             return
         ROI = self.image_viewer.get_ROI_fon_in_count(self.parent_widget.RSA_param.get("Коэффициент сжатия", 0))
