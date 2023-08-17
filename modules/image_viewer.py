@@ -49,11 +49,13 @@ class ImageView(QGraphicsView):
     def set_init(self) -> None:
         self.resetTransform()        
         self.setEnabled(False)
+        self.horizontalScrollBar().setValue(0)
+        self.verticalScrollBar().setValue(0)
         # Инициализация работы с измерением фона
         self.star_fon_select:bool = False
         
         # инициализация масштаба
-        self.scale_factor: float = 1.0
+        self.scale_factor: float = 0.3
         # инициализация позиция мыши и размера 
         self.initial_pos: QPoint
         # Если есть метки -> удаляем
@@ -101,7 +103,7 @@ class ImageView(QGraphicsView):
             self.scale_factor /= 1.2 
 
         # Ограничение масштабирования
-        self.scale_factor = max(min(self.scale_factor, 1), self.min_ratio)
+        self.scale_factor = max(min(self.scale_factor, 0.3), self.min_ratio)
      
         # масштабирование РЛИ
         self.resetTransform()
@@ -109,7 +111,7 @@ class ImageView(QGraphicsView):
 
         # # Масштабирование меток ЧКП
         for label in self.table.Chkp_index_list:
-            if label and self.scale_factor <=1 :
+            if label and self.scale_factor <=.3 :
                 # Получение текущего положения метки
                 label_pos = label.pos()
                 # Получение текущего размера метки
@@ -218,30 +220,30 @@ class ImageView(QGraphicsView):
         return max(x_ratio, y_ratio), min(1/x_ratio, 1/y_ratio)
    
     def open_file(self, path_to_img):
-        # Загрузка изображения с помощью QPixmap
-        image = QPixmap(path_to_img)
-        self.width_image = image.width()
-        self.height_image = image.height()
-        # Установка изображения в ImageView
-        self.pixmap_item.setPixmap(image)
-
-        self.min_ratio, self.max_ratio = self.get_limit_ratio(image)
-
+        self.set_init()
         self.setEnabled(True)
+
+        # Загрузка изображения с помощью QPixmap
+        self.image = QPixmap(path_to_img)
+        self.width_image = self.image.width()
+        self.height_image = self.image.height()
+
+
+        # Установите размеры сцены и области просмотра в соответствии с размерами изображения
+        self.graphics_scene.setSceneRect(0, 0, self.width_image, self.height_image)
+        self.setSceneRect(0, 0, self.width_image, self.height_image)
+        # Установка изображения в ImageView
+        self.pixmap_item.setPixmap(self.image)
+
+        self.min_ratio, self.max_ratio = self.get_limit_ratio(self.image)
+
+        
 
         self.label_x.setHidden(False)
         self.label_y.setHidden(False)
-
+        self.scale(self.scale_factor, self.scale_factor)
         # отображение метки масштаба
         self.update_scale_label_text()
-
-        # 
-
-        # Создание пользовательского курсора в виде квадрата 100x100 пикселей
-        # self.square_cursor = QCursor(QPixmap(100, 100))
-        # self.square_cursor_painter = QPainter(self.square_cursor.pixmap())
-        # self.square_cursor_painter.fillRect(self.square_cursor.pixmap().rect(), Qt.green) # type: ignore
- 
         
 
     def get_visible_pixels(self):
@@ -305,9 +307,39 @@ class ImageView(QGraphicsView):
         file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить изображение", "", "PNG Image (*.png);;JPEG Image (*.jpg *.jpeg)")
 
         if file_path:
-            visible_rect = self.viewport().rect()
-            pixmap = self.viewport().grab(visible_rect)
-            pixmap.save(file_path)
+
+            size = self.get_visible_pixels()
+            size = [round(x) for x in size]
+
+            visible_pixmap = self.image.copy(*size)
+
+            # Создаем сцену для добавления элементов
+            scene = QGraphicsScene()
+            scene.addPixmap(visible_pixmap)
+
+            # Добавляем другие объекты на сцену (здесь пример с QGraphicsPixmapItem)
+            for item in self.table.Chkp_index_list:
+                # Создаем копию объекта QGraphicsPixmapItem
+                label = QGraphicsPixmapItem(item.pixmap())
+                scene.addItem(label)
+                old_pos = item.pos()
+                new_pos_x = old_pos.x() - size[0]  
+                new_pos_y = old_pos.y() - size[1]
+                new_pos = QPointF(new_pos_x, new_pos_y)
+                label.setPos(new_pos)
+
+            # Получаем снимок сцены с объектами
+            scene_image = QPixmap(scene.sceneRect().size().toSize())
+            painter = QPainter(scene_image)
+            scene.render(painter)
+            painter.end()
+
+            scene_image.save(file_path)
+
+            self.msg.set_text("Изображение сохранено")
+
+
+            
 
 
        
