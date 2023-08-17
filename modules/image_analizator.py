@@ -72,8 +72,7 @@ class ImageAnalizator(QGraphicsView):
         self.pixmap_item = QGraphicsPixmapItem()
         self.graphics_scene.addItem(self.pixmap_item)
 
-    def set_link(self, table, msg: MSGLabel) -> None:
-        self.table = table
+    def set_link(self, msg: MSGLabel) -> None:
         self.msg = msg
     
     def set_coef_px_to_meters(self, coef_px_to_meters: list, coef_px_to_count:list) -> None:
@@ -220,15 +219,19 @@ class ImageAnalizator(QGraphicsView):
         self.ruler_clear()
 
         self.parent_widget.ampl_char.ruler.setChecked(False)
-
         self.horizontalScrollBar().setValue(0)
         self.verticalScrollBar().setValue(0)
-        # открытие изображения
+
+        # открытие изображения с помощью PIL
         self.image = Image.open(path_to_img)
         # Преобразование изображения в режим "L" (градации серого)
         self.image = self.image.convert("L")
         self.image_width, self.image_height = self.image.size
         self.copy_image = self.image.copy()
+
+         # Установите размеры сцены и области просмотра в соответствии с размерами изображения
+        self.graphics_scene.setSceneRect(0, 0, self.image_width, self.image_height)
+        self.setSceneRect(0, 0, self.image_width, self.image_height)
         
         self.setEnabled(True)
         # загрузка изображения на просмотр
@@ -239,9 +242,9 @@ class ImageAnalizator(QGraphicsView):
         # Преобразование изображения PIL в QImage
         image_qt = QImage(image_in.tobytes(), self.image_width, self.image_height, self.image_width, QImage.Format_Grayscale8)
         # Создание QPixmap из QImage
-        image = QPixmap.fromImage(image_qt)
+        self.image_display = QPixmap.fromImage(image_qt)
         # Установка изображения в ImageView
-        self.pixmap_item.setPixmap(image)
+        self.pixmap_item.setPixmap(self.image_display)
         
 
     def adjust_image(self, contrast_value, brightness_value, exp_value):
@@ -354,9 +357,38 @@ class ImageAnalizator(QGraphicsView):
         file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить изображение", "", "PNG Image (*.png);;JPEG Image (*.jpg *.jpeg)")
 
         if file_path:
-            visible_rect = self.viewport().rect()
-            pixmap = self.viewport().grab(visible_rect)
-            pixmap.save(file_path)    
+
+            # Создаем сцену для добавления элементов
+            scene = QGraphicsScene()
+            scene.addPixmap(self.image_display)
+
+            # Проверяем наличие рулетки и делаем полную копию
+            if self.ruler:
+                stack = [self.point1_item, self.point2_item]
+                for item in stack:
+                   label = QGraphicsEllipseItem(item.rect())
+                   label.setPos(item.pos())
+                   label.setBrush(item.brush())
+                   scene.addItem(label)
+
+                label = QGraphicsLineItem(self.line_item.line())
+                label.setPen(self.line_item.pen())
+                scene.addItem(label)
+                label = QGraphicsTextItem(self.distance_text_item.toPlainText())
+                label.setPlainText(self.distance_text_item.toPlainText())
+                label.setFont(self.distance_text_item.font())
+                label.setDefaultTextColor(Qt.red) # type: ignore
+                label.setPos(self.point2_item.pos())
+                scene.addItem(label)
+
+            # Получаем снимок сцены с объектами
+            scene_image = QPixmap(scene.sceneRect().size().toSize())
+            painter = QPainter(scene_image)
+            scene.render(painter)
+            painter.end()
+            scene_image.save(file_path)
+
+            self.msg.set_text("Изображение сохранено")  
 
         
 
