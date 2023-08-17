@@ -1,4 +1,4 @@
-import sys, csv
+import sys
 import os.path, os
 import matplotlib.pyplot as plt
 from PyQt5.QtCore import QRect
@@ -18,10 +18,10 @@ from modules.type_RSA_widget import TypeRSA
 from modules.constant import RSA
 from modules.fon_param import FonParam
 from modules.RSA_KA_box import RSAKABOX
-
+from modules.bright_left_image import BrightLeft
 from modules.helper import help
 
-os.system('mode con: cols=130 lines=10')
+#os.system('mode con: cols=130 lines=10')
 
 class MainForm(QtWidgets.QMainWindow):
     """Класс основного окна программы"""
@@ -37,6 +37,9 @@ class MainForm(QtWidgets.QMainWindow):
 
         # выделенное место для программы свертки
         self.convolution: Convolution
+        
+        # виджет мессенджера сообщения
+        self.msg = MSGLabel(self)
         
         #----------------Создание виджетов----------------#
         font_bolt = QFont()
@@ -68,9 +71,7 @@ class MainForm(QtWidgets.QMainWindow):
         self.label_right = QLabel("<html><b>РЛИ с САП</html></b>", self)
         self.label_right.setGeometry(800, 0, 171, 30)
         self.image_analizator = ImageAnalizator(self)
-
-        # виджет мессенджера сообщения
-        self.msg = MSGLabel(self)
+        self.image_analizator.set_link(self.msg)        
 
         # кнопка "Открыть фаил"
         self.open_file = QPushButton("Открыть фаил", self)
@@ -124,7 +125,11 @@ class MainForm(QtWidgets.QMainWindow):
         # Создание виджетов параметров фона
         self.fon_param = FonParam(self)
 
+        # Создание виджета регулировки яркости левого окна
+        self.slider_rli = BrightLeft(self)
+
         self.image_view.set_link(self.table_Chkp_2, self.msg, self.label_meters_x, self.label_meters_y)
+        
         self.set_init()
         # показ окна программы
         self.show()
@@ -173,8 +178,8 @@ class MainForm(QtWidgets.QMainWindow):
                 try:
                     val1 = int(float(self.RSA_param.get("Значение фона в дБ", 0)))
                     val2 = int(float(self.RSA_param.get("Абсолютное среднее значение фона", 0)))
-                    val3 = int(float(self.RSA_param.get("Коэффициент сигнал/фон", 0)))
-                    if val1 == 0 or val2 == 0 or val3 == 0:
+                    val3 = float(self.RSA_param.get("Коэффициент сигнал/фон", 0))
+                    if val1 == 0 or val2 == 0 or val3 == 0.0:
                         raise Exception
                     self.fon_param.set_init_OK_param(self.RSA_param.get("Значение фона в дБ"))
                     # активация кнопки "сохранение РЛ-изображения"
@@ -196,8 +201,15 @@ class MainForm(QtWidgets.QMainWindow):
             self.convolution = Convolution(self.RSA_param, f'{self.file_path_prj}', f'{self.file_name}', self.RSA_name)
             self.convolution.range_convolution_ChKP()
             self.convolution.azimuth_convolution_ChKP()
-        except:
+        except MemoryError:
+            os.system("cls")
+            print("Для обработки текущего размера РГГ не достаточен объем оперативной памяти")
+            return
+        except Exception as e:
+            os.system("cls")
+            print("Введенные параметры РСА не соответствуют РГГ")
             self.msg.set_text("Введенные параметры РСА не соответствуют РГГ", color='r')
+            return
 
         # Создание JSON файл проекта
         self.file_worker.project_json_writer(self.RSA_name, self.RSA_param)
@@ -208,6 +220,7 @@ class MainForm(QtWidgets.QMainWindow):
         self.image_analizator.set_coef_px_to_meters(coef_px_to_meters, coef_px_to_count)
         self.image_view.open_file(f'{self.file_path_prj}/{self.file_name}.png')
         self.activate_gui(self.save_full_RLI)
+        self.type_RSA_widget.btn_param.setEnabled(False)
         self.fon_param.set_init_NOT_param()
 
     def solving_SAP(self, ChKP_params) -> None:
@@ -223,7 +236,13 @@ class MainForm(QtWidgets.QMainWindow):
             RLI.azimuth_convolution_ChKP()
             self.image_analizator.open_file(f'{self.file_path_prj}/{self.file_name}_ROI.png')
             self.activate_gui(self.tabWidget2.widget(1), self.tabWidget2.widget(2))
+        except MemoryError:
+            os.system("cls")
+            print("Для обработки текущего размера РГГ не достаточен объем оперативной памяти")
+            return
         except:
+            os.system("cls")
+            print("Введенные параметры РСА не соответствуют РГГ")
             self.msg.set_text("Введенные параметры РСА не соответствуют РГГ", color='r')
         self.activate_gui(self.tabWidget2.widget(1), self.tabWidget2.widget(2))
 
@@ -319,7 +338,7 @@ class MainForm(QtWidgets.QMainWindow):
                           self.tabWidget2.widget(2),
                           status=False)
         self.tabWidget2.setCurrentIndex(0)
-        self.fon_param.set_init()
+        #self.fon_param.set_init()
         self.table_Chkp_2.set_init()
         self.slider_image_analizator.set_init()
         self.RSA_KA.set_init()

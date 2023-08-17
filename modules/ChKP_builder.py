@@ -95,10 +95,12 @@ class ChKPBuider():
                     
             Rgg_ChKP2 = np.zeros((self.RSA_param.power_two, X0), dtype=np.complex64)
             # Rgg_ChKP2[ChKP_location_y:Y0 + ChKP_location_y, :] = Rgg_ChKP
+
+
             start_index = max(0, ChKP_location_y - Y0//2)
             end_index = min(start_index + Y0, self.RSA_param.power_two)
 
-            Rgg_ChKP2[start_index:end_index, :] = Rgg_ChKP[:end_index-start_index, :]
+            Rgg_ChKP2[start_index:end_index, :] = Rgg_ChKP[:end_index-start_index, :] # type: ignore
 
 
             coord_ChKP = (ChKP_location_x, X0)

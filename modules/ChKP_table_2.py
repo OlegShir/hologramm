@@ -200,8 +200,11 @@ class ChkpTable_2(QWidget):
                 # тут путаница со столбцами
                 for column in range(self.table.columnCount()):
                     item = self.table.item(row, column)
+                    if item is None:
+                        self.msg.set_text(f'Введены не все данные для ЧКП №{row+1}')
+                        return False
                     item_text = item.text().replace(',','.')
-                    if item is None or not item_text:
+                    if not item_text:
                         self.msg.set_text(f'Введены не все данные для ЧКП №{row+1}')
                         return False
                     # тут производится пересчет положения ЧКП из пикселей в отсчеты
@@ -225,7 +228,7 @@ class ChkpTable_2(QWidget):
                                 value = (float(item_text)/chkp_fon)*dop
                             # когда указаны метры
                             else:
-                                Kp = float(item_text)/(10**(fon_DB/10))
+                                Kp = (float(item_text)/chkp_fon)/(10**(fon_DB/10))
                                 value = Kp*dop
                         else:
                             if not self.slider.value():

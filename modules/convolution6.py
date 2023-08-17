@@ -17,7 +17,8 @@
                         "hemming" - используется усреднение Хэмминга
                         "none" - нормализация не производится
 """
-import psutil
+#import psutil
+import os
 import numpy as np
 from progress.bar import IncrementalBar
 from PIL import Image
@@ -118,7 +119,8 @@ class Convolution():
         else:
             self.impactChPK = False 
         self.path_output_rpt:str = self.get_path_output_rpt()
-        self.length_check_Na()
+        if self.fon:
+            self.length_check_Na()
 
     def length_check_Na(self) -> None:
         """Метод проверяет длину Na на соответствие условию Na/2 >= Nas_bl/2"""
@@ -127,10 +129,10 @@ class Convolution():
         R_start = self.R + (self.N_otst_y - 1)*self.dnr
         # максимальное разбиение (блоков) по наклонной дальности
         max_R_centr_bl = R_start + int((self.Ndrz//2)*2) * self.dnr
-        max_Nas_bl = int((self.lamb * max_R_centr_bl) // (2 * self.resolution_x * self.dx))
-        if self.Na < max_Nas_bl:
+        self.max_Nas_bl = int((self.lamb * max_R_centr_bl) // (2 * self.resolution_x * self.dx))
+        if self.Na < self.max_Nas_bl:
             # если условие не выполняется
-            self.Na_dop = max_Nas_bl//self.Na + 1
+            self.Na_dop = self.max_Nas_bl//self.Na + 1
             # увеличиваем ширину Na
             self.Na *= self.Na_dop
 
@@ -242,7 +244,14 @@ class Convolution():
         Nbl_r = np.round(self.Ndrz / Ndr).astype(int)
         # инициализация переменных для цикла
         Las_bl = np.zeros(Nbl_r)
-        RLI1: np.ndarray = np.empty((self.Ndrz, self.Na), dtype=self.accuracy)
+
+        # Попытка создать массив, который может вызвать MemoryError
+        try:
+            RLI1: np.ndarray = np.empty((self.Ndrz, self.Na), dtype=self.accuracy)
+        except MemoryError:
+            if os.path.exists(self.path_output_rpt):
+                remove(self.path_output_rpt)
+            raise # Передача исключения обратно
         # ----------------------------------                      
         for i in IncrementalBar("Свертка исходной РГГ по азимуту  ", suffix = self.suffix).iter(range(Nbl_r)):
             # Наклонная дальность до центра блока в метрах
@@ -302,24 +311,27 @@ class Convolution():
     
     def full_RGG_part(self) -> None:
         # размер в байтах одного столбца
-        size_byte_1_Na = self.Ndn * self.accuracy_int / 8
-        memory = psutil.virtual_memory()
-        memory.available
+        # need_memory = self.Na*self.Ndn *8
+
+        # memory = psutil.virtual_memory()
+        # memory.available
 
         
-        part = 10
+        part = self.Na//(5*self.max_Nas_bl)
         # вычисляем количество частей 
-        whole_part = otstup = self.Na // part
-        remainder = self.Na % part
+        whole_part = self.Na // part
+        remainder = 0
+        print('В целях оптимизации процесса производится свертка частями')
         for i in range(part):
+            print(f'{i+1}/{part}')
             if i == part-1:
-                whole_part += remainder
-            self.range_convolution_ChKP(Na_full_rgg = whole_part,  N_ots_full_rgg = i*otstup)
+                remainder = self.Na % part
+            self.range_convolution_ChKP(Na_full_rgg = whole_part + remainder,  N_ots_full_rgg = i*whole_part)
             np_array:np.ndarray = self.azimuth_convolution_ChKP(full_RGG=True) # type: ignore
             np.save(f"{self.file_path}/np_{i}", np_array)
         # Создание пустого массива, куда будем объединять данные
         merged_array = np.empty((self.Ndrz, 0), dtype=np.float32)
-        for i in range(part):  # Предполагается, что  файлы названы от "0.npy" до "9.npy"
+        for i in range(part):  # Предполагается, что  файлы названы от "*.npy"
             file_path = f"{self.file_path}/np_{i}.npy"
             loaded_array = np.load(file_path)
             merged_array = np.concatenate((merged_array, loaded_array), axis=1)
@@ -382,8 +394,8 @@ if __name__ == '__main__':
 
 
     param_RSA = {
-        "Количество комплексных отсчетов": 11008,
-        "Количество зарегистрированных импульсов": 165500,
+        "Количество комплексных отсчетов": 2000,
+        "Количество зарегистрированных импульсов": 4000,
         "Частота дискретизации АЦП": 400e6,
         "Длина волны": 0.0351,
         "Период повторения импульсов": 485.692e-6,
@@ -406,7 +418,7 @@ if __name__ == '__main__':
     ChKP=[[8000, 4000, 100, 100, 100]]
 
 
-    sf = Convolution(param_RSA, "example", "example", "Компакт", ChKP_param=[], ROI=[4000,4000,4000,2000])
+    sf = Convolution(param_RSA, "example", "example", "Компакт", ChKP_param=[], )
     sf.range_convolution_ChKP()
     sf.azimuth_convolution_ChKP()
 

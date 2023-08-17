@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QWidget, QLabel
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QIcon
 from modules.constant import RSA 
+from modules.file_manager import get_param_from_TAB
 import resources
 
 class TypeRSA(QWidget):
@@ -52,10 +53,10 @@ class TypeRSA(QWidget):
         self.param_storage = param_storage
         self.name_type_RSA.setText(RSA[index_RSA])
         # приводим параметры к виду для функции свертки
-        int_param = [0,1,2,5,9]
+        int_param = [0,1,2,5,8]
         for i in range(len(self.param_storage)):
             if i in int_param:
-                value = int(self.param_storage[i])
+                value = int(float(self.param_storage[i]))
             else:
                 value = float(self.param_storage[i])
             param.append(value)
@@ -69,8 +70,8 @@ class TypeRSA(QWidget):
                     "Ширина спектра сигнала": param[5],
                     "Длительность импульса": param[6],
                     "Скорость движения носителя": param[7],
-                    "Размер антенны по азимуту": param[8],
-                    "Минимальная наклонная дальность": param[9],
+                    "Минимальная наклонная дальность": param[8],
+                    "Размер антенны по азимуту": param[9],
                     "Коэффициент сжатия": param[10],
                     "Минимальное значение РЛИ": 0,
                     "Максимальное значение РЛИ": 0,
@@ -116,17 +117,26 @@ class ParameterDialog(QDialog):
                            "Ширина спектра сигнала, Гц", 
                            "Длительность импульса, с",
                            "Скорость движения носителя, м/с",
-                           "Размер антенны по азимуту, м",
                            "Минимальная наклонная дальность, м",
+                           "Размер антенны по азимуту, м",
                            "Коэффициент сжатия РЛИ\n(рекомендованное значение 0.3)"]
 
         # Создание виджетов для ввода параметров
         self.param_labels:list = []
         self.param_edits:list = []
 
+        param_from_TAB = get_param_from_TAB(self.parent_widget.parent_widget.file_path_prj)
+        
+
         for i in range(len(self.list_param)):
             param_label = QLabel(self.list_param[i])
             param_edit = QLineEdit()
+            if param_from_TAB and i<9:
+                param_edit.setText(param_from_TAB[i])
+            if i == 10:
+                param_edit.setText('0.3')
+
+
             param_edit.setFixedSize(230, 20)
 
             self.param_labels.append(param_label)
@@ -134,6 +144,9 @@ class ParameterDialog(QDialog):
 
             layout.addWidget(param_label)
             layout.addWidget(param_edit)
+            
+        if param_from_TAB:
+            self.parent_widget.parent_widget.msg.set_text(f'Параметры загружены из служебного файла', color = "b")
 
         # если ввод производился ранее и параметры его сохранены вставляем их в param_edits
         if self.parent_widget.param_storage:
@@ -172,6 +185,9 @@ class ParameterDialog(QDialog):
                 text = text.replace(",", ".", 1)
                 try:
                     text = float(text)
+                    if text == 0:
+                        self.parent_widget.parent_widget.msg.set_text(f'Параметр "{self.list_param[i]}" не может быть равен нулю', color = "r")
+                        return
                 except:
                     self.parent_widget.parent_widget.msg.set_text(f'Не верный формат параметра "{self.list_param[i]}"', color = "r")
                     return

@@ -245,7 +245,12 @@ class ParameterDialog(QDialog):
                     # Изменяем параметры РСА в файле
                     return
         # Дописываем параметры в фаил
-        self.file_worker.write_RSAKA(type_RSA, param_storage)
+        try:
+            self.file_worker.write_RSAKA(type_RSA, param_storage)
+        except:
+            dialog = CustomDialog(f"Для добавления РСА необходимо запускать программу от имени Администратора!", self)
+            dialog.exec_()
+            return        
         self.parent_widget.refresh_list_RSAKA()
         self.parent_widget.type_RSA.setCurrentText(type_RSA)
 
@@ -257,7 +262,12 @@ class ParameterDialog(QDialog):
             dialog = CustomDialog(f"Данного тита РСА не существует!    ", self)
             dialog.exec_()
             return
-        self.file_worker.delete_RSAKA(type_RSA)
+        try:
+            self.file_worker.delete_RSAKA(type_RSA)
+        except:
+            dialog = CustomDialog(f"Для удаления РСА необходимо запускать программу от имени Администратора!", self)
+            dialog.exec_()
+            return
         self.parent_widget.refresh_list_RSAKA()
         self.refresh_combobox()
     

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QGroupBox, QLineEdit, QLabel, QGridLayout, QPushButton, QGraphicsView
+from PyQt5.QtWidgets import  QGroupBox, QLineEdit, QLabel, QGridLayout, QPushButton, QGraphicsView
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QPixmap, QIcon
 from modules.helper import help
@@ -13,11 +13,12 @@ class FonParam(QGroupBox):
         self.parent_widget = parent_widget
         self.image_viewer: ImageView = self.parent_widget.image_view
 
-        self.setGeometry(280, 410, 241, 120)
+        self.setGeometry(280, 400, 241, 110)
         self.setTitle("Параметры фона")
+        self.setAlignment(Qt.AlignCenter) # type: ignore
 
         self.fon_value_label = QLabel("", self)
-        self.fon_value_label.move(10, 30)
+        self.fon_value_label.move(10, 22)
 
         self.fon_refresh = QPushButton(self)
         self.fon_refresh.setFixedSize(30,30)
@@ -25,26 +26,26 @@ class FonParam(QGroupBox):
         self.fon_refresh.setToolTip(help.get('fon_refresh', ""))
         self.fon_refresh.setIcon(QIcon(pixmap))
         self.fon_refresh.setIconSize(QSize(24,24))
-        self.fon_refresh.move(200, 15)
+        self.fon_refresh.move(200, 14)
 
         self.btn_select_fon = QPushButton("Выбрать область фона", self)
         self.btn_select_fon.setToolTip(help.get('btn_select_fon', ""))
         self.btn_select_fon.setFixedSize(140,20)
-        self.btn_select_fon.move(10, 60)
+        self.btn_select_fon.move(10, 50)
 
         self.fon_DB = QLineEdit(self)
         self.fon_DB.setAlignment(Qt.AlignRight)  # type: ignore # Установка выравнивания по правому краю
         self.fon_DB.setFixedSize(50,20)
-        self.fon_DB.move(160,60)
+        self.fon_DB.move(160,50)
 
         DB_label = QLabel("дБ", self)
         DB_label.setFixedSize(20,20)
-        DB_label.move(220, 60)
+        DB_label.move(220, 50)
 
         self.btn_solve_fon = QPushButton("Рассчитать значения фона", self)
         self.btn_solve_fon.setToolTip(help.get('btn_solve_fon', ""))
         self.btn_solve_fon.setFixedSize(200,20)
-        self.btn_solve_fon.move(10, 90)
+        self.btn_solve_fon.move(10, 80)
 
         # Устанавливаем кнопку "Выбрать область фона" в режим "переключатель"
         self.btn_select_fon.setCheckable(True)
@@ -76,6 +77,7 @@ class FonParam(QGroupBox):
         self.fon_DB.setText("")
         self.btn_select_fon.setEnabled(True)
         self.btn_solve_fon.setEnabled(True)
+        self.fon_DB.setEnabled(True)
         self.update_size_fon_px()
 
     def set_init_OK_param(self, DB) -> None:

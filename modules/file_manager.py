@@ -2,6 +2,8 @@
 import json, datetime, pickle, os.path
 from os import listdir
 
+
+
 class FileWorker():
     def __init__(self, path: str) -> None:
         """Класс предназначен для работы с файловой системой. Он обеспечивает получение данных 
@@ -27,13 +29,13 @@ class FileWorker():
         self.file_type = file_type
         self.json_file = f"{self.file_path_prj}/{self.file_name}.json"
 
-    def get_info_file(self) -> tuple[str, str, str]:
+    def get_info_file(self):
         """Возвращает данные о пути до файла, имя файла и его расширение."""
 
         return self.file_path_prj, self.file_name, self.file_type
         
 
-    def project_json_reader(self) -> tuple[str, dict]:
+    def project_json_reader(self):
         """Метод считывает JSON файл проекта и возвращает название РСА и его параметры."""
         with open(self.json_file, "r", encoding="utf-8") as read_file:
             data = json.load(read_file)
@@ -179,52 +181,93 @@ def project_json_writer(parent):
         # Запись данных в файл в формате JSON
         json.dump(data, file, ensure_ascii=False)
 
-class ServiceInfo():
-    """Класс предназначен для поиска параметров РСА в служебных файлах"""
-    def __init__(self, path_project: str) -> None:
-        
-        self.path_project = path_project
-        # Разрешение файлов, которые проверяются
-        self.desired_extension = ['._TAB', '._SAR']
 
-    def find_files(self):
-        pass
-
-    def view_TAB(self):
-        # Количество комплексных отсчетов - PULSE_LENGTH/2
-        # Количество зарегистрированных импульсов - PULSES
-        # Частота дискретизации АЦП - SAMP_FREQ
-        # Длина волны - LAMBDA
-        # Период повторения импульсов - 1/PULSE_REPETITION_FREQ
-        # Ширина спектра сигнала - BANDWIDTH
-        # Длительность импульса - !
-        # Скорость движения носителя - 
+def find_tab_file(directory: str):
+    """Рекурсивно ищет файл с расширением ._TAB в указанной директории и её подпапках."""
+    for root, dirs, files in os.walk(directory):
+        for filename in files:
+            if filename.endswith("._TAB"):
+                return os.path.join(root, filename)
+    return None
 
 
+def get_param_from_TAB(path_prj: str) -> list:
+    """Метод производит поиск служебного файла *._TAB, 
+       если фаил существует, то производится поиск в нем
+       параметров РСА:
+        Количество комплексных отсчетов - PULSE_LENGTH/2
+        Количество зарегистрированных импульсов - PULSES
+        Частота дискретизации АЦП - SAMP_FREQ
+        Длина волны - LAMBDA
+        Период повторения импульсов - 1/PULSE_REPETITION_FREQ
+        Ширина спектра сигнала - -BANDWIDTH
+        Длительность импульса - TAU_IMP_MKS*10e-6
+        Скорость движения носителя - SPEED
+        Минимальная наклонная дальность - RANGE_OF_FIRST_SAMPLE.
+    """
+    # Получаем список файлов в указанной папке
+    tab_file = find_tab_file(path_prj)
 
-
+    # Если файл найден, производим поиск в нем
+    if tab_file:
         # Открываем файл для чтения
-        with open('your_file.txt', 'r') as file:
-            lines = file.readlines()
+        with open(tab_file, 'r') as file:
+            content = file.read()
 
-        # Инициализируем пустой список для хранения данных
-        data_list = []
+        # Создаем словарь для хранения значений
+        desired_tags = {
+            'PULSE_LENGTH': '',
+            'PULSES': '',
+            'SAMP_FREQ': '',
+            'LAMBDA': '',
+            'PULSE_REPETITION_FREQ': '',
+            'BANDWIDTH': '',
+            'TAU_IMP_MKS': '',
+            'SPEED': '',
+            'RANGE_OF_FIRST_SAMPLE': ''
+        }
 
-        # Обходим каждую строку в файле
+        # Разделяем содержимое файла на строки
+        lines = content.split('\n')
+
+        # Проходим по каждой строке и ищем соответствующие теги
         for line in lines:
-            # Разделяем строку на ключ и значение
-            key, value = line.strip().split('=')
-            # Добавляем ключ и значение в список как кортеж (tuple)
-            data_list.append((key, value))
+            for tag in desired_tags:
+                if line.startswith(tag):
+                    # Получаем значение после символа равенства
+                    value = line.split('=')[1]
+                    # Производим форматирование параметров PULSE_LENGTH, 
+                    #                                      PULSES, 
+                    #                                      PULSE_REPETITION_FREQ, 
+                    #                                      TAU_IMP_MKS
+                    try:
+                        value = line.split('=')[1].strip()
+                        if tag == 'PULSE_LENGTH':
+                            value = int(float(value)) // 2
+                        elif tag == 'PULSE_REPETITION_FREQ':
+                            value = 1 / float(value)
+                        elif tag == 'TAU_IMP_MKS':
+                            value = format(float(value) * 1e-6, ".6f")
+                        elif tag == 'PULSES':
+                            value = value.split(' ')[1]
+                        elif tag == 'BANDWIDTH':
+                            value = value.replace('-','')
 
-        # Выводим список с данными
-        for key, value in data_list:
-            print(f'{key}: {value}')
+                        desired_tags[tag] = str(value)
+                    except (ValueError, IndexError):
+                        desired_tags[tag] = ''
+        # Преобразуем словарь в список значений в нужном порядке
+        result = [desired_tags[tag] for tag in desired_tags]
+        
+        return result
 
-
+    else:
+        return []
 
 
 if __name__ == "__main__":
     
-
-    t = ServiceInfo('')
+    x = get_param_from_TAB('.')
+    
+    print(x)
+  

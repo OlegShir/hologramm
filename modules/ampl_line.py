@@ -86,7 +86,7 @@ class GraphAmplitudeValue:
 
 
         # Сглаживание графика с помощью полинома
-        degree = 4
+        degree = 5
         coefficients = np.polyfit(x_axis, ampl_values_np, degree)
         polynomial = np.poly1d(coefficients)
 
