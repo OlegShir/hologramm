@@ -1,13 +1,14 @@
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QFileDialog, QLabel, QGraphicsRectItem
 from PyQt5.QtCore import Qt, QPoint, QPointF
-from PyQt5.QtGui import QPainter, QPixmap, QBrush
+from PyQt5.QtGui import QPainter, QPixmap, QBrush, QImage
 from modules.ChKP_table_2 import ChkpTable_2
 from modules.massager import MSGLabel
 from PyQt5.QtCore import QPropertyAnimation, QPoint
+from PIL import Image, ImageEnhance
 
 
 class ImageView(QGraphicsView):
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         super(ImageView, self).__init__(parent)
 
         self.parent_widget = parent
@@ -39,12 +40,8 @@ class ImageView(QGraphicsView):
         self.coef_px_to_count: list
         self.coef_px_to_meters: list
 
-        self.width_image: int
-        self.height_image: int
-
         self.label_x: QLabel
         self.label_y: QLabel
-
 
     def set_init(self) -> None:
         self.resetTransform()        
@@ -85,9 +82,6 @@ class ImageView(QGraphicsView):
         self.fon_rect.setPen(pen)
         self.fon_rect.setBrush(QBrush()) # type: ignore
 
-
-
-
     def set_link(self, table, msg, label_x, label_y):
         self.label_x = label_x
         self.label_y = label_y
@@ -95,117 +89,125 @@ class ImageView(QGraphicsView):
         self.msg = msg
     
     def wheelEvent(self, event):
-        # Handle mouse wheel event for zooming
-        delta = event.angleDelta().y()
-        if delta > 0:
-            self.scale_factor *= 1.2
-        else:
-            self.scale_factor /= 1.2 
-
-        # Ограничение масштабирования
-        self.scale_factor = max(min(self.scale_factor, 0.3), self.min_ratio)
-     
-        # масштабирование РЛИ
-        self.resetTransform()
-        self.scale(self.scale_factor, self.scale_factor)
-
-        # # Масштабирование меток ЧКП
-        for label in self.table.Chkp_index_list:
-            if label and self.scale_factor <=.3 :
-                # Получение текущего положения метки
-                label_pos = label.pos()
-                # Получение текущего размера метки
-                old_size = label.boundingRect().width()
-                # Масштабирование пиксельного изображения c использованием оригинального изображения метки
-                new_size = int(self.xsize_Chkp_pixmap / self.scale_factor)
-                scaled_pixmap = self.Chkp_pixmap.scaledToWidth(new_size)
-                # Установка масштабированного изображения метки
-                label.setPixmap(scaled_pixmap)
-                # Пересчет позиции с учетом изменения масштаба
-                new_pos = label_pos + QPointF((old_size - new_size) / 2, (old_size - new_size) / 2)
-                # Установка новой позиции метки
-                label.setPos(new_pos)
-        
-        self.update_scale_label_text()
-
-
-     
+        if self.parent_widget.blocker.status:
+            # Handle mouse wheel event for zooming
+            delta = event.angleDelta().y()
+            if delta > 0:
+                self.scale_factor *= 1.2
+            else:
+                self.scale_factor /= 1.2 
+            # Ограничение масштабирования
+            self.scale_factor = max(min(self.scale_factor, 0.3), self.min_ratio)
+            # масштабирование РЛИ
+            self.resetTransform()
+            self.scale(self.scale_factor, self.scale_factor)
+            # Масштабирование меток ЧКП
+            for label in self.table.Chkp_index_list:
+                if label and self.scale_factor <=.3 :
+                    # Получение текущего положения метки
+                    label_pos = label.pos()
+                    # Получение текущего размера метки
+                    old_size = label.boundingRect().width()
+                    # Масштабирование пиксельного изображения c использованием оригинального изображения метки
+                    new_size = int(self.xsize_Chkp_pixmap / self.scale_factor)
+                    scaled_pixmap = self.Chkp_pixmap.scaledToWidth(new_size)
+                    # Установка масштабированного изображения метки
+                    label.setPixmap(scaled_pixmap)
+                    # Пересчет позиции с учетом изменения масштаба
+                    new_pos = label_pos + QPointF((old_size - new_size) / 2, (old_size - new_size) / 2)
+                    # Установка новой позиции метки
+                    label.setPos(new_pos)
+            
+            self.update_scale_label_text()
 
     def mousePressEvent(self, event):
-        # Handle mouse press event for moving the image
-        self.initial_pos = event.pos()
-        super(ImageView, self).mousePressEvent(event)
+        if self.parent_widget.blocker.status: 
+
+            # Handle mouse press event for moving the image
+            self.initial_pos = event.pos()
+            super(ImageView, self).mousePressEvent(event)
     
-    def mouseMoveEvent(self, event):        
+    def mouseMoveEvent(self, event):
+        if self.parent_widget.blocker.status:        
         
-        if event.buttons() == Qt.LeftButton: # type: ignore 
-            
-            delta = event.pos() - self.initial_pos
-            target_pos = self.viewport().pos() - delta
+            if event.buttons() == Qt.LeftButton: # type: ignore 
+                
+                delta = event.pos() - self.initial_pos
+                target_pos = self.viewport().pos() - delta
 
-            animation = QPropertyAnimation(self.viewport(), b"pos")
-            animation.setDuration(200)  # Длительность анимации в миллисекундах
-            animation.setStartValue(self.viewport().pos())
-            animation.setEndValue(target_pos)
-            animation.start()
+                animation = QPropertyAnimation(self.viewport(), b"pos")
+                animation.setDuration(200)  # Длительность анимации в миллисекундах
+                animation.setStartValue(self.viewport().pos())
+                animation.setEndValue(target_pos)
+                animation.start()
 
-            event.accept()
+                event.accept()
     
-        super(ImageView, self).mouseMoveEvent(event)
+            super(ImageView, self).mouseMoveEvent(event)
+
+    def dragMoveEvent(self, event):
+        if not self.parent_widget.blocker.status: 
+            event.ignore()  # Игнорируем событие перетаскивания
+
+    def dropEvent(self, event):
+        if not self.parent_widget.blocker.status: 
+            event.ignore()  # Игнорируем событие перетаскивания   
     
     def mouseReleaseEvent(self, event):
-        if self.star_fon_select:
-            if event.pos() == self.initial_pos and event.button() == Qt.LeftButton: # type: ignore 
-                # Удаляем область если она уже нарисована
-                if self.fon_rect in self.graphics_scene.items():
-                    self.graphics_scene.removeItem(self.fon_rect)
-                # получение координат пикселей места нажатия
-                pixmap_pos = self.mapToScene(event.pos())
-                self.fon_rect.setPos(QPointF(pixmap_pos.x()-self.fon_rect_size/2, pixmap_pos.y()-self.fon_rect_size/2))
-                self.graphics_scene.addItem(self.fon_rect)
+        if self.parent_widget.blocker.status:
 
-
-        else:
-            if self.table.table.rowCount() and self.table.table.currentRow() != -1:
-                # Handle mouse release event
+            if self.star_fon_select:
                 if event.pos() == self.initial_pos and event.button() == Qt.LeftButton: # type: ignore 
+                    # Удаляем область если она уже нарисована
+                    if self.fon_rect in self.graphics_scene.items():
+                        self.graphics_scene.removeItem(self.fon_rect)
                     # получение координат пикселей места нажатия
                     pixmap_pos = self.mapToScene(event.pos())
-                    # получаем элемент на который нажали - это либо само РЛИ, либо уже существующая ЧКП
-                    pixmap_item = self.graphics_scene.itemAt(pixmap_pos, self.transform())
-                    # если не нажали ЧКП
-                    if pixmap_item == self.pixmap_item:
-                        # получаем ссылку на метку для текущей строки
-                        pixmap_current_row = self.table.Chkp_index_list[self.table.table.currentRow()]
-                        # если есть метра, то удаляем ее
-                        if pixmap_current_row:
-                            self.graphics_scene.removeItem(pixmap_current_row)
-                        # учитываем масштаб
-                        scaled_width = round(self.Chkp_pixmap.width() / self.scale_factor)
-                        scaled_height = round(self.Chkp_pixmap.height() / self.scale_factor)
-                        # добавляем изображение ЧКП в сцену
-                        label = self.graphics_scene.addPixmap(self.Chkp_pixmap.scaled(scaled_width, scaled_height))
-                        # установка позиции ЧКП
-                        label_pos = pixmap_pos - QPointF(scaled_width/2, scaled_width/2)
-                        label.setPos(label_pos)
-                        # добавление в список
-                        self.table.Chkp_index_list[self.table.table.currentRow()] = label
-                        # перезаписываем координаты
-                        self.table.update_coord_ChKP(self.table.table.currentRow(), pixmap_pos)
-                        
+                    self.fon_rect.setPos(QPointF(pixmap_pos.x()-self.fon_rect_size/2, pixmap_pos.y()-self.fon_rect_size/2))
+                    self.graphics_scene.addItem(self.fon_rect)
 
-                elif event.button() == Qt.RightButton: # type: ignore
-                    # получение координат пикселей места нажатия
-                    item_pos = self.mapToScene(event.pos())
-                    # получаем элемент на который нажали
-                    item = self.graphics_scene.itemAt(item_pos, self.transform())
-                    # если это ЧКП
-                    if item in self.table.Chkp_index_list:
-                        # поиск и удаление
-                        self.graphics_scene.removeItem(item)
-                        row = self.table.Chkp_index_list.index(item)
-                        self.table.table.removeRow(row)
-                        self.table.Chkp_index_list.remove(item)
+
+            else:
+                if self.table.table.rowCount() and self.table.table.currentRow() != -1:
+                    # Handle mouse release event
+                    if event.pos() == self.initial_pos and event.button() == Qt.LeftButton: # type: ignore 
+                        # получение координат пикселей места нажатия
+                        pixmap_pos = self.mapToScene(event.pos())
+                        # получаем элемент на который нажали - это либо само РЛИ, либо уже существующая ЧКП
+                        pixmap_item = self.graphics_scene.itemAt(pixmap_pos, self.transform())
+                        # если не нажали ЧКП
+                        if pixmap_item == self.pixmap_item:
+                            # получаем ссылку на метку для текущей строки
+                            pixmap_current_row = self.table.Chkp_index_list[self.table.table.currentRow()]
+                            # если есть метра, то удаляем ее
+                            if pixmap_current_row:
+                                self.graphics_scene.removeItem(pixmap_current_row)
+                            # учитываем масштаб
+                            scaled_width = round(self.Chkp_pixmap.width() / self.scale_factor)
+                            scaled_height = round(self.Chkp_pixmap.height() / self.scale_factor)
+                            # добавляем изображение ЧКП в сцену
+                            label = self.graphics_scene.addPixmap(self.Chkp_pixmap.scaled(scaled_width, scaled_height))
+                            # установка позиции ЧКП
+                            label_pos = pixmap_pos - QPointF(scaled_width/2, scaled_width/2)
+                            label.setPos(label_pos)
+                            # добавление в список
+                            self.table.Chkp_index_list[self.table.table.currentRow()] = label
+                            # перезаписываем координаты
+                            self.table.update_coord_ChKP(self.table.table.currentRow(), pixmap_pos)
+                            
+
+                    elif event.button() == Qt.RightButton: # type: ignore
+                        # получение координат пикселей места нажатия
+                        item_pos = self.mapToScene(event.pos())
+                        # получаем элемент на который нажали
+                        item = self.graphics_scene.itemAt(item_pos, self.transform())
+                        # если это ЧКП
+                        if item in self.table.Chkp_index_list:
+                            # поиск и удаление
+                            self.graphics_scene.removeItem(item)
+                            row = self.table.Chkp_index_list.index(item)
+                            self.table.table.removeRow(row)
+                            self.table.Chkp_index_list.remove(item)
 
         super(ImageView, self).mouseReleaseEvent(event)
 
@@ -214,37 +216,58 @@ class ImageView(QGraphicsView):
         vertical = self.verticalScrollBar().width()
         horizontal = self.horizontalScrollBar().height()
 
-        x_ratio = (self.size().width()-vertical) / image.size().width() 
-        y_ratio = (self.size().height()-horizontal)/ image.size().height()
+        x_ratio = (self.size().width()-vertical) / self.width_image 
+        y_ratio = (self.size().height()-horizontal)/ self.height_image
 
         return max(x_ratio, y_ratio), min(1/x_ratio, 1/y_ratio)
    
     def open_file(self, path_to_img):
         self.set_init()
         self.setEnabled(True)
+        self.label_x.setHidden(False)
+        self.label_y.setHidden(False)
 
-        # Загрузка изображения с помощью QPixmap
-        self.image = QPixmap(path_to_img)
-        self.width_image = self.image.width()
-        self.height_image = self.image.height()
-
+         # открытие изображения с помощью PIL
+        self.image = Image.open(path_to_img)
+        # Преобразование изображения в режим "L" (градации серого)
+        self.image = self.image.convert("L")
+        self.width_image, self.height_image = self.image.size
+        self.copy_image = self.image.copy()
 
         # Установите размеры сцены и области просмотра в соответствии с размерами изображения
         self.graphics_scene.setSceneRect(0, 0, self.width_image, self.height_image)
         self.setSceneRect(0, 0, self.width_image, self.height_image)
-        # Установка изображения в ImageView
-        self.pixmap_item.setPixmap(self.image)
+        
+        # загрузка изображения на просмотр
+        self.update_display_image(self.copy_image)
 
         self.min_ratio, self.max_ratio = self.get_limit_ratio(self.image)
 
-        
-
-        self.label_x.setHidden(False)
-        self.label_y.setHidden(False)
         self.scale(self.scale_factor, self.scale_factor)
         # отображение метки масштаба
         self.update_scale_label_text()
+
+
+    def update_display_image(self, image_in):
+        # Преобразование изображения PIL в QImage
+        image_qt = QImage(image_in.tobytes(), self.width_image, self.height_image, self.width_image, QImage.Format_Grayscale8)
+        # Создание QPixmap из QImage
+        self.image_display = QPixmap.fromImage(image_qt)
+        # Установка изображения в ImageView
+        self.pixmap_item.setPixmap(self.image_display)
+
+    def adjust_image(self, contrast_value, brightness_value):
         
+        # Изменение контраста
+        contrast_enhancer = ImageEnhance.Contrast(self.image)
+        adjusted_image = contrast_enhancer.enhance(contrast_value)
+
+        # Изменение яркости
+        brightness_enhancer = ImageEnhance.Brightness(adjusted_image)
+        self.copy_image = brightness_enhancer.enhance(brightness_value)
+         
+        self.update_display_image(self.copy_image)
+
 
     def get_visible_pixels(self):
         """получение размеров изображения в пикселях и 
@@ -311,7 +334,7 @@ class ImageView(QGraphicsView):
             size = self.get_visible_pixels()
             size = [round(x) for x in size]
 
-            visible_pixmap = self.image.copy(*size)
+            visible_pixmap = self.image_display.copy(*size)
 
             # Создаем сцену для добавления элементов
             scene = QGraphicsScene()

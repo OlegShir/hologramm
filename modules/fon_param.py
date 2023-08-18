@@ -62,9 +62,9 @@ class FonParam(QGroupBox):
         # При изменении значения фона в дБ
         self.fon_DB.textChanged.connect(self.check_fon_DB)
         # Добавляем виджеты 
-
-        
+       
         self.set_value(False)
+         
 
     def set_init(self) -> None:
         self.setHidden(True)
@@ -92,6 +92,12 @@ class FonParam(QGroupBox):
         self.fon_refresh.setChecked(False)
         self.parent_widget.tabWidget2.widget(0).setEnabled(True)
         self.update_size_fon_px()
+
+    def blocked(self):
+        self.fon_DB.setEnabled(False)
+        self.btn_select_fon.setEnabled(False)
+        self.btn_solve_fon.setEnabled(False)
+
     
     def update_size_fon_px(self):
         """Метод обновляет размер квадрата фона в левом окне"""
@@ -99,6 +105,9 @@ class FonParam(QGroupBox):
         self.parent_widget.image_view.add_fon_rect(fon_rect_size)
 
     def fon_refresh_clicked(self) -> None:
+        if not self.parent_widget.blocker.status:
+            self.parent_widget.msg.set_text(f'Разблокируйте изображение РЛИ', color = 'r')
+            return 
         if self.fon_refresh.isChecked():
             # Нажата
             status = True

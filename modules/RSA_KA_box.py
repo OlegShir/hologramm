@@ -13,18 +13,18 @@ class RSAKABOX(QWidget):
 
         self.setFixedSize(191, 215)
 
-        self.main_box = QGroupBox("Мощность САП для РСА КА", self)
+        self.main_box = QGroupBox("Мощность САП для КРСА", self)
         self.main_box.setFixedSize(191, 215)
 
 
-        self.box = QGroupBox("Выбор космического РСА", self.main_box)
+        self.box = QGroupBox("Выбор КРСА", self.main_box)
         self.box.setFixedSize(170,85)
         self.box.move(10, 20)
         layout_box = QVBoxLayout(self.box)
 
         self.type_RSA = QComboBox()
         self.type_RSA.setFixedHeight(25)
-        self.btn_change_RSA = QPushButton("Изменить РСА")
+        self.btn_change_RSA = QPushButton("Изменить КРСА")
         self.btn_change_RSA.setFixedHeight(25)
 
         # Добавление виджетов в коробку
@@ -54,7 +54,7 @@ class RSAKABOX(QWidget):
     def refresh_list_RSAKA(self):
         self.type_RSA.clear()
         if not self.file_worker.check_file:
-            self.parent_widget.msg.set_text("Не найден фаил с параметрами РСА КА", color = 'r')
+            self.parent_widget.msg.set_text("Не найден фаил с параметрами КРСА", color = 'r')
         else:
             self.list_RSAKA = self.file_worker.read_type_RSAKA()
             self.type_RSA.addItems(self.list_RSAKA)
@@ -94,7 +94,7 @@ class RSAKABOX(QWidget):
         # Получаем тип РСА
         type_RSA = self.type_RSA.currentText()
         if type_RSA == "":
-            self.parent_widget.msg.set_text("Не выбран тип космического РСА", color = 'r')
+            self.parent_widget.msg.set_text("Не выбран тип КРСА", color = 'r')
             return
         param_RSA = self.file_worker.read_param_RASKA(type_RSA)
         # получаем параметры ЧКП
@@ -127,14 +127,14 @@ class ParameterDialog(QDialog):
         self.parent_widget = parent_widget
         self.file_worker: RSAKAWorker = self.parent_widget.file_worker
  
-        self.setWindowTitle("Ввод параметров РСА КА ")
+        self.setWindowTitle("Ввод параметров КРСА ")
         pixmap = QPixmap(':/ico/qt_forms/resources/RSA.png')
         self.setWindowIcon(QIcon(pixmap))
 
         layout = QVBoxLayout(self)
 
         # Создание виджета для выбора типа авиационного РСА
-        self.type_RSA_label = QLabel("Тип космического РСА")
+        self.type_RSA_label = QLabel("Тип КРСА")
         # Создание виджета QComboBox
         self.combo_box = QComboBox()
         self.refresh_combobox()
@@ -235,7 +235,7 @@ class ParameterDialog(QDialog):
         # Проверяем наличие изменения в списке
         type_RSA = self.combo_box.currentText()
         if type_RSA == "":
-            self.parent_widget.parent_widget.msg.set_text(f'Не выбран тип космического РСА',color = "r")
+            self.parent_widget.parent_widget.msg.set_text(f'Не выбран тип КРСА',color = "r")
         if type_RSA in self.list_RSAKA:
             get_value = self.file_worker.read_param_RASKA(type_RSA)
             if get_value != param_storage:
@@ -291,49 +291,3 @@ class CustomDialog(QMessageBox):
         else:
             return False
 
-
-
-
-
-
-
-
-
-"""
-
-
-
-
-class RSAKA():
-    def __init__(self, RSA_KA_Param) -> None:
-        self.RSA_KA_Param: list = RSA_KA_Param
-        self.get_init_param()
-
-    def get_init_param(self) -> None:
-        pulse_power, KND_antenna, observation_range, size_antenna_long, size_antenna_trans, \
-        effective_area_antenna, illuminated_section, pulse_duration = self.RSA_KA_Param
-
-        self.pulse_power = pulse_power
-        self.KND_antenna = convert_Db_to_times(KND_antenna)
-        self.observation_range = observation_range
-        self.size_antenna_long = size_antenna_long
-        self.size_antenna_trans = size_antenna_trans
-        self.effective_area_antenna = effective_area_antenna
-        self.illuminated_section = illuminated_section
-        self.pulse_duration = pulse_duration
-
-    def get_Pf(self):
-        Pf = (self.pulse_power*self.KND_antenna*BF_grass_times*3e8*self.pulse_duration*self.illuminated_section)/(8*np.pi*(self.observation_range**2))
-
-        return Pf
-    
-    def get_PG(self, Kp, size_x_ChKP, size_y_ChKP):
-        
-        PG = (Kp*self.get_Pf()*4*np.pi*(self.observation_range**2)*2*size_x_ChKP*size_y_ChKP)/(self.effective_area_antenna*3e8*self.pulse_duration*self.illuminated_section)
-
-        return PG 
-
-
-# combo_box.setEditable(True)  # Включаем режим редактирования
-
-"""

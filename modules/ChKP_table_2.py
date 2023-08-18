@@ -81,6 +81,15 @@ class ChkpTable_2(QWidget):
         self.slider.sliderPressed.connect(self.slider_pressed)
         self.slider.valueChanged.connect(self.change_value)
 
+    @staticmethod
+    def blocker(func):
+        def wrapper(self):
+            if not self.parent_widget.blocker.status: 
+                self.msg.set_text(f'Разблокируйте изображение РЛИ', color = 'r')
+                return
+            func(self)
+        return wrapper
+
     def set_init(self):
         """Метод восстанавливает начальное состояние виджета"""
         if hasattr(self, 'Chkp_index_list'):
@@ -104,8 +113,6 @@ class ChkpTable_2(QWidget):
         self.table.horizontalHeaderItem(2).setText("Интенсивность\n(помеха/фон)")
         self.var1.setText("<html><b>помеха/фон</b></html>")
         self.var2.setText("метр квадратный")
-        
-
 
 
     def slider_pressed(self):
@@ -113,8 +120,8 @@ class ChkpTable_2(QWidget):
             self.slider.setValue(1)
             return
         self.slider.setValue(0)
-        
- 
+
+    @blocker
     def add_element(self) -> None:
         # визуальное отражение
         if 0 in self.Chkp_index_list:
@@ -124,6 +131,7 @@ class ChkpTable_2(QWidget):
         self.table.insertRow(rowPosition)
         self.Chkp_index_list.append(0)
 
+    @blocker
     def del_element(self) -> None:
         if self.table.currentRow() >= 0:
             row = self.table.currentRow()
@@ -131,13 +139,13 @@ class ChkpTable_2(QWidget):
             label = self.Chkp_index_list.pop(row)
             if label:
                 self.image_viewer.graphics_scene.removeItem(label)
-
+    @blocker
     def get_ChKP_param_to_solve_SAP(self) -> None:
         """Метод передает параметры ЧКП в родительский метод и вызывает процесс реформирования свертки с РОИ."""
         # Сбор параметров ЧКП из таблицы
         ChKP_param = self.data_collector()
         if not ChKP_param:
-            self.msg.set_text("Не введены данные ЧКП", color="r")
+            # self.msg.set_text("Не введены данные ЧКП", color="r")
             return
         self.parent_widget.solving_SAP(ChKP_param)
 
@@ -217,8 +225,14 @@ class ChkpTable_2(QWidget):
                         if not for_PG:
                             chkp_fon = self.parent_widget.RSA_param.get("Коэффициент сигнал/фон", 0)
                             # отношение по Х
+                            if self.table.item(row, 3) is None or self.table.item(row, 3).text() == '':
+                                self.msg.set_text(f'Не введены данные размера для ЧКП №{row+1}')
+                                return 
                             x_value = float(self.table.item(row, 3).text().replace(',','.'))/50
                             # отношение по Х
+                            if self.table.item(row, 4) is None or self.table.item(row, 4).text() == '':
+                                self.msg.set_text(f'Не введены данные размера для ЧКП №{row+1}')
+                                return 
                             y_value = float(self.table.item(row, 4).text().replace(',','.'))/50
                             # среднее 
                             mean = (x_value+y_value)/2
@@ -235,6 +249,16 @@ class ChkpTable_2(QWidget):
                                 value = float(item_text)
                             else:
                                 value = float(item_text)/(10**(fon_DB/10))
+                    elif column ==3:
+                         # Проверяем QR
+                        result = self.QR_check(float(item_text), row)
+                        if not result:
+                            self.msg.set_text(f'Размер по азимуту ЧКП №{row+1} превышает мгновенно облучаемый участок')
+                            self.table.blockSignals(True)  # Блокировка сигналов, чтобы избежать рекурсии
+                            self.table.setItem(row, 3, QTableWidgetItem(''))  # Установка пустого значения
+                            self.table.blockSignals(False)  # Разблокировка сигналов
+                            return
+                        value = int(float(item_text))
                     else:
                         value = int(float(item_text))
                     data_ChKp.append(value)
@@ -242,6 +266,25 @@ class ChkpTable_2(QWidget):
                 data_ChKps.append(data_ChKp)
 
         return data_ChKps
+    
+
+    def QR_check(self, value, row) -> bool:
+        # Получаем необходимые значения        
+        lamb = self.parent_widget.RSA_param.get("Длина волны", 0)
+        AntX = self.parent_widget.RSA_param.get("Размер антенны по азимуту", 0)
+        R = self.parent_widget.RSA_param.get("Минимальная наклонная дальность", 0)
+        
+        try:
+            QR = (lamb/AntX)*R
+        except:
+            return True
+        
+        if value > QR:
+            return False
+
+        return True
+        
+
     
 
     

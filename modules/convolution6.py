@@ -247,7 +247,7 @@ class Convolution():
 
         # Попытка создать массив, который может вызвать MemoryError
         try:
-            RLI1: np.ndarray = np.empty((self.Ndrz, self.Na), dtype=self.accuracy)
+            RLI1: np.ndarray = np.empty((self.Ndrz, self.Na), dtype=self.accuracy) # type: ignore
         except MemoryError:
             if os.path.exists(self.path_output_rpt):
                 remove(self.path_output_rpt)
@@ -418,7 +418,7 @@ if __name__ == '__main__':
     ChKP=[[8000, 4000, 100, 100, 100]]
 
 
-    sf = Convolution(param_RSA, "example", "example", "Компакт", ChKP_param=[], )
+    sf = Convolution(param_RSA, "example", "example", "Компакт", ChKP_param=[], ROI=[8000, 4000, 4000, 2000])
     sf.range_convolution_ChKP()
     sf.azimuth_convolution_ChKP()
 

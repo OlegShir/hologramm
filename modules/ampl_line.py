@@ -80,13 +80,11 @@ class GraphAmplitudeValue:
         # Преобразование списка 'ampl_values_along_line' в массив NumPy для построения графика
         ampl_values_np =np.array(ampl_values)/norm_value
         fon_value_m2 = self.fon_value/norm_value
-        print(norm_value)
 
         x_axis = np.arange(len(ampl_values))
 
-
         # Сглаживание графика с помощью полинома
-        degree = 5
+        degree = 10
         coefficients = np.polyfit(x_axis, ampl_values_np, degree)
         polynomial = np.poly1d(coefficients)
 

@@ -9,10 +9,15 @@
     <file>qt_forms/resources/refresh.png</file>
     <file>qt_forms/resources/save_RSA.png</file>
     <file>qt_forms/resources/del_RSA.png</file>
+    <file>qt_forms/resources/forward.png</file>
+    <file>qt_forms/resources/back.png</file>
+    <file>qt_forms/resources/reset.png</file>
   </qresource>
   <qresource prefix="ico">
     <file>qt_forms/resources/icon.png</file>
     <file>qt_forms/resources/RSA.png</file>
+    <file>qt_forms/resources/block_open.png</file>
+    <file>qt_forms/resources/block_close.png</file>
   </qresource>
   <qresource prefix="value">
     <file>qt_forms/resources/Ksap.png</file>

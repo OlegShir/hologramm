@@ -19,6 +19,7 @@ from modules.constant import RSA
 from modules.fon_param import FonParam
 from modules.RSA_KA_box import RSAKABOX
 from modules.bright_left_image import BrightLeft
+from modules.blocker import Blocker
 from modules.helper import help
 
 #os.system('mode con: cols=130 lines=10')
@@ -128,6 +129,9 @@ class MainForm(QtWidgets.QMainWindow):
         # Создание виджета регулировки яркости левого окна
         self.slider_rli = BrightLeft(self)
 
+        # Создание виджета блокировки левого окна
+        self.blocker = Blocker(self)
+
         self.image_view.set_link(self.table_Chkp_2, self.msg, self.label_meters_x, self.label_meters_y)
         
         self.set_init()
@@ -172,8 +176,9 @@ class MainForm(QtWidgets.QMainWindow):
                     # передаем коэффициент перевода из пикселей в метры в класс ImageAnalizator для расчета линейки
                     self.image_analizator.set_coef_px_to_meters(coef_px_to_meters, coef_px_to_count)
                     self.image_view.open_file(file_path)
-                except:
+                except Exception:
                     self.msg.set_text("Ошибка в файле параметров", color= 'r')
+                    return
                 # проверяем наличие параметров фона если кто-то поковырялся в json
                 try:
                     val1 = int(float(self.RSA_param.get("Значение фона в дБ", 0)))
@@ -185,7 +190,9 @@ class MainForm(QtWidgets.QMainWindow):
                     # активация кнопки "сохранение РЛ-изображения"
                     self.activate_gui(self.save_full_RLI,self.tabWidget2.widget(0))
                 except Exception:
-                    self.fon_param.set_init_NOT_param()              
+                    self.fon_param.set_init_NOT_param()
+                finally:
+                    self.slider_rli.setHidden(False)        
                 
             elif file_type == 'rgg':
                 self.type_RSA_widget.btn_param.setEnabled(True)
@@ -207,8 +214,7 @@ class MainForm(QtWidgets.QMainWindow):
             return
         except Exception as e:
             os.system("cls")
-            print("Введенные параметры РСА не соответствуют РГГ")
-            self.msg.set_text("Введенные параметры РСА не соответствуют РГГ", color='r')
+            print("Свертка РГГ с выбранными параметрами невозможна")
             return
 
         # Создание JSON файл проекта
@@ -222,6 +228,7 @@ class MainForm(QtWidgets.QMainWindow):
         self.activate_gui(self.save_full_RLI)
         self.type_RSA_widget.btn_param.setEnabled(False)
         self.fon_param.set_init_NOT_param()
+        self.slider_rli.setHidden(False)
 
     def solving_SAP(self, ChKP_params) -> None:
         """Получение РЛИ с ЧКП"""
@@ -242,9 +249,10 @@ class MainForm(QtWidgets.QMainWindow):
             return
         except:
             os.system("cls")
-            print("Введенные параметры РСА не соответствуют РГГ")
+            print("Свертка РГГ с выбранными параметрами невозможна")
             self.msg.set_text("Введенные параметры РСА не соответствуют РГГ", color='r')
         self.activate_gui(self.tabWidget2.widget(1), self.tabWidget2.widget(2))
+        self.blocker.blocked()
 
     def solving_fon(self, ROI):
         os.system("cls")
@@ -338,11 +346,13 @@ class MainForm(QtWidgets.QMainWindow):
                           self.tabWidget2.widget(2),
                           status=False)
         self.tabWidget2.setCurrentIndex(0)
-        #self.fon_param.set_init()
+        self.fon_param.set_init()
+        self.slider_rli.set_init()
         self.table_Chkp_2.set_init()
         self.slider_image_analizator.set_init()
         self.RSA_KA.set_init()
         self.ampl_char.set_init()
+        self.blocker.set_init()
         os.system("cls")
         
 

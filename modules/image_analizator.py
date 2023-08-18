@@ -13,6 +13,8 @@ class ImageAnalizator(QGraphicsView):
         super(ImageAnalizator, self).__init__(parent_widget)
 
         self.parent_widget = parent_widget
+        # инициализация ссылки обработку изображения
+        self.msg: MSGLabel
 
         # Create a scene for displaying images
         self.graphics_scene = QGraphicsScene(self)
@@ -24,8 +26,7 @@ class ImageAnalizator(QGraphicsView):
         # размер изображения в px
         self.xsize_RLI_pixmap: int
         self.ysize_RLI_pixmap: int
-        # инициализация ссылки обработку изображения
-        self.msg: MSGLabel
+        
 
         # переменные для измерения расстояния
         self.point1_item = QGraphicsEllipseItem()
@@ -227,6 +228,13 @@ class ImageAnalizator(QGraphicsView):
         # Преобразование изображения в режим "L" (градации серого)
         self.image = self.image.convert("L")
         self.image_width, self.image_height = self.image.size
+
+        # Пропускаем изображение через фильтр
+        self.adjust_image(self.parent_widget.slider_rli.contrast_value, 
+                          self.parent_widget.slider_rli.bright_value, 
+                          1,
+                          first_open= True)
+
         self.copy_image = self.image.copy()
 
          # Установите размеры сцены и области просмотра в соответствии с размерами изображения
@@ -247,7 +255,7 @@ class ImageAnalizator(QGraphicsView):
         self.pixmap_item.setPixmap(self.image_display)
         
 
-    def adjust_image(self, contrast_value, brightness_value, exp_value):
+    def adjust_image(self, contrast_value, brightness_value, exp_value, first_open = False):
         
         # Изменение контраста
         contrast_enhancer = ImageEnhance.Contrast(self.image)
@@ -256,6 +264,11 @@ class ImageAnalizator(QGraphicsView):
         # Изменение яркости
         brightness_enhancer = ImageEnhance.Brightness(adjusted_image)
         adjusted_image = brightness_enhancer.enhance(brightness_value)
+
+        # Если фаил открывается первый раз
+        if first_open:
+            self.image = adjusted_image
+            return
 
         # Изменение резкости
         sharpness_enhancer = ImageEnhance.Sharpness(adjusted_image)
